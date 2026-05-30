@@ -2449,10 +2449,107 @@ document.addEventListener('DOMContentLoaded', async () => {
     DB.listenPresencia((presencia) => {
         presenciaUsuarios = presencia || {};
         renderChatUsers();
+        renderOnlineWidget();
         if (activeChatUser) {
             actualizarEstadoChatActivo();
         }
     });
+
+    // Lógica del Widget Flotante de Usuarios en Línea
+    const widgetContainer = document.getElementById('online-users-widget');
+    const widgetToggle = document.getElementById('online-widget-toggle');
+    const widgetClose = document.getElementById('online-widget-close');
+
+    widgetToggle?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        widgetContainer?.classList.toggle('widget-open');
+    });
+
+    widgetClose?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        widgetContainer?.classList.remove('widget-open');
+    });
+
+    document.addEventListener('click', (e) => {
+        if (widgetContainer && widgetContainer.classList.contains('widget-open')) {
+            if (!widgetContainer.contains(e.target)) {
+                widgetContainer.classList.remove('widget-open');
+            }
+        }
+    });
+
+    function renderOnlineWidget() {
+        const widgetCount = document.getElementById('online-widget-count');
+        const widgetList = document.getElementById('online-widget-list');
+        if (!widgetCount || !widgetList) return;
+
+        const usuarios = JSON.parse(localStorage.getItem('usuarios_registrados') || '[]');
+        const otrosUsuarios = usuarios.filter(u => u.correo.toLowerCase() !== sesion.correo.toLowerCase());
+
+        const conectados = otrosUsuarios.filter(u => {
+            const safe = getSafeEmail(u.correo);
+            return (presenciaUsuarios[safe] || {}).online === true;
+        });
+
+        widgetCount.textContent = `${conectados.length} en línea`;
+
+        widgetList.innerHTML = '';
+        if (conectados.length === 0) {
+            widgetList.innerHTML = `
+                <div style="text-align:center;color:var(--text-muted);padding:24px 0;font-size:0.8rem;">
+                    No hay siervos en línea
+                </div>
+            `;
+            return;
+        }
+
+        conectados.forEach(u => {
+            const item = document.createElement('div');
+            item.className = 'online-widget-item';
+            
+            let avatarHtml = '';
+            if (u.fotoUrl) {
+                avatarHtml = `<img src="${u.fotoUrl}">`;
+            } else {
+                const iniciales = u.nombre.split(' ').map(p => p[0]).join('').substring(0, 2).toUpperCase();
+                avatarHtml = `<div class="online-widget-placeholder" style="background:linear-gradient(135deg,var(--primary-color),var(--secondary-color));">${iniciales}</div>`;
+            }
+
+            const areaFmt = normalizarArea(u.area) || 'General';
+
+            item.innerHTML = `
+                ${avatarHtml}
+                <div class="online-widget-info">
+                    <div class="online-widget-name">${u.nombre}</div>
+                    <div class="online-widget-meta">
+                        <span class="online-widget-badge">${areaFmt}</span>
+                        <span>🟢 En línea</span>
+                    </div>
+                </div>
+            `;
+
+            item.addEventListener('click', () => {
+                irA('chat-view');
+                widgetContainer?.classList.remove('widget-open');
+                
+                // Abrir conversación
+                activeChatUser = u;
+                abrirConversacion(u);
+                
+                // Highlight user in chat list
+                setTimeout(() => {
+                    renderChatUsers();
+                    const userItem = document.querySelector(`.chat-user-item[data-correo="${u.correo}"]`);
+                    if (userItem) {
+                        document.querySelectorAll('.chat-user-item').forEach(el => el.classList.remove('active'));
+                        userItem.classList.add('active');
+                    }
+                }, 100);
+            });
+
+            widgetList.appendChild(item);
+        });
+    }
 
     let activeChatUser = null;
     let todosLosMensajes = [];
@@ -2662,6 +2759,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             document.getElementById('filtro-area')?.value || ''
         );
         actualizarEstadisticas();
+        renderOnlineWidget();
     });
     DB.listenProyectos(data => {
         _lsSetItem('proyectos_creados', JSON.stringify(data));

@@ -652,6 +652,23 @@
         </div>
     </div>
 
+    <!-- Panel Flotante de Usuarios en Línea (Persistente) -->
+    <div id="online-users-widget">
+        <button id="online-widget-toggle" class="glass-panel" title="Quiénes están conectados">
+            <span class="online-dot pulsing"></span>
+            <span id="online-widget-count">0 en línea</span>
+        </button>
+        <div id="online-widget-panel" class="glass-panel">
+            <div class="online-panel-header">
+                <h3>🟢 Equipo en línea</h3>
+                <button id="online-widget-close">&times;</button>
+            </div>
+            <div id="online-widget-list">
+                <!-- Dinámico -->
+            </div>
+        </div>
+    </div>
+
     <script src="dashboard.js" type="module"></script>
 </body>
 </html>
