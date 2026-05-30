@@ -141,6 +141,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     // Sincronizar datos desde Firebase antes de renderizar (ahora es seguro)
     try {
         await sincronizarDesdeFirebase();
+        migrarFormatosServicios();
     } catch(err) {
         console.error("Error sincronizando DB:", err);
     }
@@ -1235,6 +1236,42 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         const ref = fechaReservaISO ? new Date(fechaReservaISO) : new Date();
         return new Date(ref.getFullYear(), ref.getMonth(), parseInt(numDia), h, min, 0, 0);
+    }
+
+    function migrarFormatosServicios() {
+        const raw = localStorage.getItem('servicios_reservados');
+        if (!raw) return;
+        try {
+            let servicios = JSON.parse(raw);
+            let modificado = false;
+            
+            servicios = servicios.map(s => {
+                // Si ya contiene " de ", ya está en el nuevo formato
+                if (s.servicio.includes(' de ')) return s;
+                
+                const f = servicioToDate(s.servicio, s.fecha);
+                if (!f) return s;
+                
+                const diaSemana = f.getDay() === 0 ? 'Domingo' : f.getDay() === 3 ? 'Miércoles' : '';
+                if (!diaSemana) return s;
+                
+                const mesNombre = f.toLocaleDateString('es', { month: 'long' });
+                const partes = s.servicio.split(' a las ');
+                const horaStr = partes[1] || '';
+                
+                const nuevoServicio = `${diaSemana} ${f.getDate()} de ${mesNombre} a las ${horaStr}`;
+                console.log(`Migrando servicio: "${s.servicio}" -> "${nuevoServicio}"`);
+                
+                modificado = true;
+                return { ...s, servicio: nuevoServicio };
+            });
+            
+            if (modificado) {
+                localStorage.setItem('servicios_reservados', JSON.stringify(servicios));
+            }
+        } catch(e) {
+            console.error("Error al migrar formatos de servicios:", e);
+        }
     }
 
     function limpiarServiciosExpirados() {
