@@ -207,6 +207,133 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     }
 
+    // ─── GOOGLE LOGIN ──────────────────────────────────────────
+    const btnGoogleLogin = document.getElementById('btn-google-login');
+    const btnGoogleRegister = document.getElementById('btn-google-register');
+
+    async function handleGoogleAuth(e) {
+        e.preventDefault();
+        const btn = e.currentTarget;
+        const textOriginal = btn.innerHTML;
+        btn.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">↻</span> Conectando...';
+        btn.style.pointerEvents = 'none';
+
+        try {
+            const result = await AUTH.loginGoogle();
+            const user = result.user;
+            let usuarios = await DB.getUsuarios();
+            
+            // Reparar uid vacío por si acaso
+            let huboCambios = false;
+            usuarios.forEach(u => {
+                if (u.correo.toLowerCase() === user.email.toLowerCase() && !u.uid) {
+                    u.uid = user.uid;
+                    huboCambios = true;
+                }
+            });
+            if(huboCambios) await DB.setUsuarios(usuarios);
+
+            let usuarioEnDB = usuarios.find(u => u.correo.toLowerCase() === user.email.toLowerCase());
+
+            if (usuarioEnDB) {
+                // Usuario existe, login normal
+                sessionStorage.setItem('sesion_activa', JSON.stringify(usuarioEnDB));
+                irAlDashboard();
+            } else {
+                // Opción B: Usuario nuevo de Google, pedir área
+                if (loginPanel) loginPanel.classList.add('hidden');
+                if (registerPanel) registerPanel.classList.add('hidden');
+                if (forgotPanel) forgotPanel.classList.add('hidden');
+                
+                // Creamos el panel de completar área dinámicamente si no existe
+                let areaPanel = document.getElementById('google-area-panel');
+                if (!areaPanel) {
+                    areaPanel = document.createElement('div');
+                    areaPanel.id = 'google-area-panel';
+                    areaPanel.className = 'glass-panel';
+                    areaPanel.innerHTML = `
+                        <div class="panel-header">
+                            <h1>Casi <span class="highlight">Listo</span></h1>
+                            <p>Dinos de qué área eres para terminar tu registro con Google</p>
+                        </div>
+                        <form id="google-area-form">
+                            <div class="input-group">
+                                <label>Área a la que perteneces</label>
+                                <select id="google-reg-area" required>
+                                    <option value="" disabled selected>Elige un área...</option>
+                                    <option value="Visuales">📺 Visuales</option>
+                                    <option value="Filmakers">🎥 Filmakers</option>
+                                    <option value="Fotografía">📸 Fotografía</option>
+                                    <option value="Técnica">🎛️ Técnica (Switchers / Cámaras)</option>
+                                    <option value="Streaming">🌐 Streaming</option>
+                                    <option value="Luces">💡 Luces</option>
+                                    <option value="Diseño">🎨 Diseño</option>
+                                    <option value="Edición">✂️ Edición</option>
+                                    <option value="Coordinación">📋 Coordinación</option>
+                                    <option value="Protocolos">🤝 Protocolos</option>
+                                </select>
+                            </div>
+                            <div class="input-group" id="google-tecnica-subarea-group" style="display:none;">
+                                <label>Área Específica</label>
+                                <select id="google-reg-subarea">
+                                    <option value="Switcher">🎛️ Switcher</option>
+                                    <option value="Cámaras">📸 Cámaras</option>
+                                </select>
+                            </div>
+                            <button type="submit" class="btn-primary" style="margin-top:20px;">Finalizar Registro</button>
+                        </form>
+                    `;
+                    document.querySelector('.container').appendChild(areaPanel);
+                    
+                    document.getElementById('google-reg-area').addEventListener('change', (ev) => {
+                        document.getElementById('google-tecnica-subarea-group').style.display = (ev.target.value === 'Técnica') ? '' : 'none';
+                    });
+
+                    document.getElementById('google-area-form').addEventListener('submit', async (ev) => {
+                        ev.preventDefault();
+                        const area = document.getElementById('google-reg-area').value;
+                        const subarea = area === 'Técnica' ? document.getElementById('google-reg-subarea').value : '';
+                        if (!area) return;
+                        
+                        const btnSub = ev.target.querySelector('button');
+                        btnSub.innerHTML = '<span style="display:inline-block;animation:spin 1s linear infinite;">↻</span> Guardando...';
+                        btnSub.style.pointerEvents = 'none';
+
+                        const nuevoUsuario = {
+                            uid: user.uid,
+                            nombre: user.displayName || 'Usuario de Google',
+                            correo: user.email,
+                            area: area,
+                            subarea: subarea,
+                            telefono: '',
+                            rol: 'Siervo',
+                            fecha: new Date().toISOString(),
+                            fotoUrl: user.photoURL || null
+                        };
+                        usuarios.push(nuevoUsuario);
+                        await DB.setUsuarios(usuarios);
+                        
+                        sessionStorage.setItem('sesion_activa', JSON.stringify(nuevoUsuario));
+                        irAlDashboard();
+                    });
+                }
+                
+                // Mostrar el panel
+                areaPanel.classList.remove('hidden');
+                areaPanel.style.opacity = '1';
+                areaPanel.style.transform = 'translateY(0) scale(1)';
+            }
+        } catch (error) {
+            btn.innerHTML = textOriginal;
+            btn.style.pointerEvents = 'all';
+            console.error("Google Auth Error:", error);
+            showNotification('Error con Google: ' + (error.message || 'Cerraste la ventana'), 'error');
+        }
+    }
+
+    if (btnGoogleLogin) btnGoogleLogin.addEventListener('click', handleGoogleAuth);
+    if (btnGoogleRegister) btnGoogleRegister.addEventListener('click', handleGoogleAuth);
+
     // ─── RECUPERACIÓN DE CONTRASEÑA ──────────────────────────
     const forgotForm = document.getElementById('forgot-form');
     if (forgotForm) {

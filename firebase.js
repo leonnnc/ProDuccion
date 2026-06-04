@@ -4,7 +4,7 @@
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js';
 import { getDatabase, ref, set, get, update, remove, onValue, push, child, onDisconnect }
     from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut, updatePassword }
+import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, sendPasswordResetEmail, onAuthStateChanged, signOut, updatePassword, GoogleAuthProvider, signInWithPopup }
     from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js';
 import { getStorage, ref as sRef, uploadBytes, getDownloadURL }
     from 'https://www.gstatic.com/firebasejs/12.11.0/firebase-storage.js';
@@ -105,7 +105,8 @@ export const AUTH = {
     recuperar: (email) => sendPasswordResetEmail(auth, email),
     logout: () => signOut(auth),
     onEstadoCambiado: (cb) => onAuthStateChanged(auth, cb),
-    cambiarClave: (user, nuevaClave) => updatePassword(user, nuevaClave)
+    cambiarClave: (user, nuevaClave) => updatePassword(user, nuevaClave),
+    loginGoogle: () => signInWithPopup(auth, new GoogleAuthProvider())
 };
 
 export const STORAGE = {
