@@ -76,6 +76,17 @@ Dado que el frontend es completamente estático (Vanilla JS), configurarlo local
 
 ---
 
+## ☕ Apoyo y Donaciones
+
+Si este proyecto ha sido de bendición para tu ministerio, iglesia o equipo técnico, y deseas apoyar su desarrollo continuo para seguir añadiendo nuevas funciones, ¡tu contribución es muy valiosa! 
+
+Puedes ponerte en contacto directamente con el creador para donaciones o consultas:
+📧 **Email de Contacto / Donaciones:** [leonnnc@gmail.com](mailto:leonnnc@gmail.com)
+
+¡Gracias por ser parte de este proyecto!
+
+---
+
 ## 📄 Licencia
 
 Este proyecto es abierto y está diseñado para bendecir y facilitar el trabajo técnico a iglesias y organizaciones sin fines de lucro. Siéntete libre de adaptarlo a tus necesidades.
