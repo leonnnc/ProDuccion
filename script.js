@@ -264,7 +264,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <option value="Visuales">📺 Visuales</option>
                                     <option value="Filmakers">🎥 Filmakers</option>
                                     <option value="Fotografía">📸 Fotografía</option>
-                                    <option value="Técnica">🎛️ Técnica (Switchers / Cámaras)</option>
+                                    <option value="Switchers">🎛️ Switchers</option>
+                                    <option value="Cámaras">📸 Cámaras</option>
                                     <option value="Streaming">🌐 Streaming</option>
                                     <option value="Luces">💡 Luces</option>
                                     <option value="Diseño">🎨 Diseño</option>
@@ -273,26 +274,14 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <option value="Protocolos">🤝 Protocolos</option>
                                 </select>
                             </div>
-                            <div class="input-group" id="google-tecnica-subarea-group" style="display:none;">
-                                <label>Área Específica</label>
-                                <select id="google-reg-subarea">
-                                    <option value="Switcher">🎛️ Switcher</option>
-                                    <option value="Cámaras">📸 Cámaras</option>
-                                </select>
-                            </div>
                             <button type="submit" class="btn-primary" style="margin-top:20px;">Finalizar Registro</button>
                         </form>
                     `;
                     document.querySelector('.container').appendChild(areaPanel);
-                    
-                    document.getElementById('google-reg-area').addEventListener('change', (ev) => {
-                        document.getElementById('google-tecnica-subarea-group').style.display = (ev.target.value === 'Técnica') ? '' : 'none';
-                    });
 
                     document.getElementById('google-area-form').addEventListener('submit', async (ev) => {
                         ev.preventDefault();
                         const area = document.getElementById('google-reg-area').value;
-                        const subarea = area === 'Técnica' ? document.getElementById('google-reg-subarea').value : '';
                         if (!area) return;
                         
                         const btnSub = ev.target.querySelector('button');
@@ -304,7 +293,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                             nombre: user.displayName || 'Usuario de Google',
                             correo: user.email,
                             area: area,
-                            subarea: subarea,
                             telefono: '',
                             rol: 'Siervo',
                             fecha: new Date().toISOString(),

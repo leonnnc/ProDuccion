@@ -71,6 +71,10 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
                         Aprende
                     </a></li>
+                    <li><a href="#" class="nav-link" data-target="transmision-view">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M2 12h2"></path><path d="M20 12h2"></path></svg>
+                        Transmisión en Vivo
+                    </a></li>
                     <li><a href="#" class="nav-link" data-target="chat-view">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
                         Chat
@@ -193,7 +197,7 @@
                                 <option value="Filmakers">Filmakers</option>
                                 <option value="Fotografía">Fotografía</option>
                                 <option value="Coordinación">Coordinación</option>
-                                <option value="Técnica">Áreas (Switchers/Cámaras)</option>
+                                <option value="Switchers">Switchers</option>
                                 <option value="Streaming">Streaming</option>
                                 <option value="Luces">Luces</option>
                                 <option value="Diseño">Diseño</option>
@@ -246,6 +250,10 @@
                                 <label>Hora del Evento</label>
                                 <input type="time" id="proj-hora" required>
                             </div>
+                            <div class="input-group">
+                                <label>Límite Voluntarios</label>
+                                <input type="date" id="proj-fecha-limite" required>
+                            </div>
                         </div>
                         <div class="input-group">
                             <label>Áreas Requeridas y Siervos por Área</label>
@@ -254,7 +262,7 @@
                                 <div class="area-row" data-area="Filmakers"><span class="area-icono">🎥</span><span class="area-nombre">Filmakers</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Fotografía"><span class="area-icono">📷</span><span class="area-nombre">Fotografía</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Coordinación"><span class="area-icono">📋</span><span class="area-nombre">Coordinación</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
-                                <div class="area-row" data-area="Técnica"><span class="area-icono">🎛️</span><span class="area-nombre">Técnica (Switchers/Cámaras)</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
+                                <div class="area-row" data-area="Switchers"><span class="area-icono">🎛️</span><span class="area-nombre">Switchers</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Streaming"><span class="area-icono">📡</span><span class="area-nombre">Streaming</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Luces"><span class="area-icono">💡</span><span class="area-nombre">Luces</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Diseño"><span class="area-icono">🎨</span><span class="area-nombre">Diseño</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
@@ -425,6 +433,23 @@
                 </div>
             </div>
 
+            <!-- VISTA: TRANSMISIÓN EN VIVO -->
+            <div id="transmision-view" class="view-section hidden-view">
+                <div class="details-panel glass-panel" style="padding:0; overflow:hidden;">
+                    <div class="panel-heading" style="padding:20px; border-bottom:1px solid var(--panel-border); display:flex; justify-content:space-between; align-items:center;">
+                        <h2>🔴 Transmisión en Vivo</h2>
+                        <button id="btn-config-transmision" class="btn-secondary hidden" style="font-size:0.75rem;">⚙️ Configurar Enlace</button>
+                    </div>
+                    <div id="transmision-container" style="position:relative; padding-bottom:56.25%; height:0; background:#000;">
+                        <iframe id="transmision-iframe" style="position:absolute; top:0; left:0; width:100%; height:100%;" src="" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        <div id="transmision-placeholder" style="position:absolute; top:0; left:0; width:100%; height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; color:var(--text-muted); background:var(--panel-bg);">
+                            <span style="font-size:3rem; margin-bottom:10px;">📡</span>
+                            <p>No hay transmisión activa configurada.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- VISTA: CHAT -->
             <div id="chat-view" class="view-section hidden-view">
                 <div class="chat-container glass-panel" style="display: flex; height: calc(100vh - 120px); min-height: 500px; padding: 0; overflow: hidden; border-radius: 16px;">
@@ -507,7 +532,7 @@
                                 <option value="Filmakers">Filmakers</option>
                                 <option value="Fotografía">Fotografía</option>
                                 <option value="Coordinación">Coordinación</option>
-                                <option value="Técnica">🎛️ Áreas (Switchers / Cámaras)</option>
+                                <option value="Switchers">🎛️ Switchers</option>
                                 <option value="Streaming">Streaming</option>
                                 <option value="Luces">Luces</option>
                                 <option value="Diseño">Diseño</option>
@@ -584,6 +609,10 @@
                                 <label>Hora del Evento</label>
                                 <input type="time" id="ep-hora" required>
                             </div>
+                            <div class="input-group">
+                                <label>Límite Voluntarios</label>
+                                <input type="date" id="ep-fecha-limite" required>
+                            </div>
                         </div>
                         <div class="input-group">
                             <label>Áreas y Siervos Requeridos</label>
@@ -592,7 +621,7 @@
                                 <div class="area-row" data-area="Filmakers"><span class="area-icono">🎥</span><span class="area-nombre">Filmakers</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Fotografía"><span class="area-icono">📷</span><span class="area-nombre">Fotografía</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Coordinación"><span class="area-icono">📋</span><span class="area-nombre">Coordinación</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
-                                <div class="area-row" data-area="Técnica"><span class="area-icono">🎛️</span><span class="area-nombre">Técnica (Switchers/Cámaras)</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
+                                <div class="area-row" data-area="Switchers"><span class="area-icono">🎛️</span><span class="area-nombre">Switchers</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Streaming"><span class="area-icono">📡</span><span class="area-nombre">Streaming</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Luces"><span class="area-icono">💡</span><span class="area-nombre">Luces</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
                                 <div class="area-row" data-area="Diseño"><span class="area-icono">🎨</span><span class="area-nombre">Diseño</span><div class="area-counter"><button type="button" class="area-counter-btn area-minus">−</button><input type="number" class="area-cantidad" min="0" value="0"><button type="button" class="area-counter-btn area-plus">+</button></div></div>
@@ -648,20 +677,31 @@
                                 <option value="Filmakers">Filmakers</option>
                                 <option value="Fotografía">Fotografía</option>
                                 <option value="Coordinación">Coordinación</option>
-                                <option value="Técnica">Áreas (Switchers/Cámaras)</option>
-                                <option value="Streaming">Streaming</option>
-                                <option value="Luces">Luces</option>
-                                <option value="Diseño">Diseño</option>
-                                <option value="Edición">Edición</option>
-                                <option value="Protocolos">Protocolos</option>
+                                <option value="Switchers">Switchers</option>
+                                <option value="Cámaras">Cámaras</option>
                             </select>
                         </div>
                         <div class="input-group">
                             <label>Mensaje</label>
-                            <textarea id="broadcast-message" rows="3" placeholder="Escribe el mensaje para el área..." maxlength="500" required style="resize:vertical;"></textarea>
+                            <textarea id="broadcast-msg" rows="4" placeholder="Escribe tu mensaje..." required></textarea>
                         </div>
-                        <button type="submit" class="btn-primary" style="margin-top:10px;">📤 Enviar a todos</button>
+                        <button type="submit" class="btn-primary" style="margin-top:16px;">Enviar Notificación</button>
                     </form>
+                </div>
+            </div>
+
+            <!-- MODAL: ASIGNAR EQUIPO -->
+            <div id="asignacion-modal" class="modal hidden">
+                <div class="modal-content glass-panel" style="max-width:550px;">
+                    <span class="close-modal" data-modal="asignacion-modal">&times;</span>
+                    <h2>👥 Asignar Equipo</h2>
+                    <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:15px;">
+                        Evento: <strong id="asignacion-evento-nombre" style="color:var(--text-color);"></strong>
+                    </p>
+                    <div id="asignacion-areas-container" style="display:flex;flex-direction:column;gap:15px;">
+                        <!-- Se llenará dinámicamente -->
+                    </div>
+                    <button id="btn-guardar-asignacion" class="btn-primary" style="margin-top:20px;">Guardar Asignaciones</button>
                 </div>
             </div>
         </main>
@@ -710,25 +750,18 @@
                         </div>
                         <div class="input-group">
                             <label>Área a la que perteneces</label>
-                            <select id="perfil-area" required onchange="document.getElementById('perfil-subarea-group').style.display=this.value==='Técnica'?'':'none'">
+                            <select id="perfil-area" required>
                                 <option value="Visuales">Visuales</option>
                                 <option value="Filmakers">Filmakers</option>
                                 <option value="Fotografía">Fotografía</option>
                                 <option value="Coordinación">Coordinación</option>
-                                <option value="Técnica">🎛️ Áreas (Switchers / Cámaras)</option>
+                                <option value="Switchers">Switchers</option>
                                 <option value="Streaming">Streaming</option>
                                 <option value="Luces">Luces</option>
                                 <option value="Diseño">Diseño</option>
                                 <option value="Edición">Edición</option>
                                 <option value="Protocolos">Protocolos</option>
                                 <option value="Administración">Administración</option>
-                            </select>
-                        </div>
-                        <div class="input-group" id="perfil-subarea-group" style="display:none;">
-                            <label>Área Específica</label>
-                            <select id="perfil-subarea">
-                                <option value="Switcher">🎛️ Switcher</option>
-                                <option value="Cámaras">📸 Cámaras</option>
                             </select>
                         </div>
                         <div class="input-group" style="margin-top:15px; border-top:1px solid rgba(255,255,255,0.1); padding-top:15px;">

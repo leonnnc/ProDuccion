@@ -131,26 +131,19 @@
                 </div>
                 <div class="input-group">
                     <label for="reg-area">Área a la que perteneces</label>
-                    <select id="reg-area" required onchange="document.getElementById('tecnica-subarea-group').style.display=this.value==='T\u00e9cnica'?'':'none'">
+                    <select id="reg-area" required>
                         <option value="" disabled selected>Selecciona un área...</option>
                         <option value="Visuales">Visuales</option>
                         <option value="Filmakers">Filmakers</option>
                         <option value="Fotografía">Fotografía</option>
                         <option value="Coordinación">Coordinación</option>
-                        <option value="Técnica">🎛️ Áreas (Switchers / Cámaras)</option>
+                        <option value="Switchers">🎛️ Switchers</option>
+                        <option value="Cámaras">📸 Cámaras</option>
                         <option value="Streaming">Streaming</option>
                         <option value="Luces">Luces</option>
                         <option value="Diseño">Diseño</option>
                         <option value="Edición">Edición</option>
                         <option value="Protocolos">Protocolos</option>
-                    </select>
-                </div>
-                <!-- Sub-área para Técnica -->
-                <div class="input-group" id="tecnica-subarea-group" style="display:none;">
-                    <label for="reg-subarea">Área Específica</label>
-                    <select id="reg-subarea">
-                        <option value="Switcher">🎛️ Switcher</option>
-                        <option value="Cámaras">📸 Cámaras</option>
                     </select>
                 </div>
                 <button type="submit" class="btn-primary">Completar Registro</button>
