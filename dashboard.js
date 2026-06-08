@@ -719,10 +719,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const hora = p.hora || '00:00';
         const fechaEvento = new Date(`${p.fecha}T${hora}:00`);
         const ahora = new Date();
-        const manana = new Date(fechaEvento);
-        manana.setDate(manana.getDate() + 1);
-        manana.setHours(0, 0, 0, 0);
-        if (ahora >= manana)      return 'Completado';
+        
+        // El evento expira a las 3 horas de haber iniciado
+        const expira = new Date(fechaEvento.getTime() + (3 * 60 * 60 * 1000));
+        
+        if (ahora >= expira)      return 'Completado';
         if (ahora >= fechaEvento) return 'En curso';
         return 'Planificado';
     }
