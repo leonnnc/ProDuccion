@@ -5,3 +5,8 @@ backup_*/
 # Sistema
 .DS_Store
 Thumbs.db
+
+# Ejecutables e instaladores
+*.exe
+win-g3000-1_3-n_mcd/
+
