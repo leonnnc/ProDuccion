@@ -141,6 +141,7 @@ async function sincronizarDesdeFirebase() {
     // Listeners en tiempo real — solo actualizan UI cuando appReady=true
     // Usan window.* para evitar referencias a funciones no definidas aún
     DB.listenUsuarios(d => {
+        console.log("DEBUG listenUsuarios - triggered. Data:", d, "appReady:", appReady, "hasCargarTabla:", !!window._cargarTablaUsuarios);
         updateLocalCache('usuarios_registrados', d);
         if (!appReady) return;
         if (window._cargarTablaUsuarios)     window._cargarTablaUsuarios();
