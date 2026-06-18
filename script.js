@@ -191,13 +191,18 @@ document.addEventListener('DOMContentLoaded', async () => {
                 console.error("Login error:", error);
                 
                 // Tratar el caso donde el usuario existe en DB pero no en Auth (ej: antiguos)
-                const usuarios = await DB.getUsuarios();
-                const existeAntiguo = usuarios.find(u => u.correo.toLowerCase() === correo.toLowerCase());
-                if (existeAntiguo && error.code === 'auth/invalid-credential') {
-                    showNotification('Debido a una actualización de seguridad, necesitas restablecer tu contraseña. Ve a "¿Olvidaste tu contraseña?".', 'error');
-                } else {
-                    showNotification('Credenciales incorrectas o usuario no existe.', 'error');
+                try {
+                    const usuarios = await DB.getUsuarios();
+                    const existeAntiguo = usuarios.find(u => u.correo.toLowerCase() === correo.toLowerCase());
+                    if (existeAntiguo && error.code === 'auth/invalid-credential') {
+                        showNotification('Debido a una actualización de seguridad, necesitas restablecer tu contraseña. Ve a "¿Olvidaste tu contraseña?".', 'error');
+                        return;
+                    }
+                } catch (dbError) {
+                    console.warn("No se pudo verificar base de datos por falta de permisos:", dbError);
                 }
+                
+                showNotification('Credenciales incorrectas o usuario no existe.', 'error');
             }
         });
     }
