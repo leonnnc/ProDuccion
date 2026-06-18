@@ -9,7 +9,7 @@ const APP_VERSION = '2.2.0';
 // Registrar Service Worker en idle para no bloquear la carga con soporte de actualización
 if ('serviceWorker' in navigator) {
     const registerSW = () => {
-        navigator.serviceWorker.register('/sw.js').then(reg => {
+        navigator.serviceWorker.register('sw.js').then(reg => {
             if (reg.waiting) {
                 notificarActualizacionDisponible(reg.waiting);
             }

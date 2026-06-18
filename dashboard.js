@@ -8,7 +8,7 @@ const APP_VERSION = '2.2.0';
 
 // Registrar Service Worker para PWA con soporte de actualización rápida (update-on-click)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').then(reg => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
         if (reg.waiting) {
             notificarActualizacionDisponible(reg.waiting);
         }

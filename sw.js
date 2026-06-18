@@ -1,19 +1,19 @@
 // ==========================================
 // SERVICE WORKER — ProDuccion PWA
 // ==========================================
-const CACHE_NAME = 'produc-v10';
+const CACHE_NAME = 'produc-v11';
 
 // Assets estáticos que se cachean al instalar
 const STATIC_ASSETS = [
-    '/',
-    '/index.html',
-    '/style.css',
-    '/script.js',
-    '/firebase.js',
-    '/utils.js',
-    '/manifest.json',
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
+    './',
+    'index.html',
+    'style.css',
+    'script.js',
+    'firebase.js',
+    'utils.js',
+    'manifest.json',
+    'icons/icon-192.png',
+    'icons/icon-512.png',
     'https://www.gstatic.com/firebasejs/12.11.0/firebase-app.js',
     'https://www.gstatic.com/firebasejs/12.11.0/firebase-database.js',
     'https://www.gstatic.com/firebasejs/12.11.0/firebase-auth.js',

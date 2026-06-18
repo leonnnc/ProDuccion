@@ -6,7 +6,7 @@ El sistema unifica la agenda de servicios bimestrales, el control de asistencia,
 
 ---
 
-## 🚀 Características Clave y Nuevos Módulos (v2.2.3)
+## 🚀 Características Clave y Nuevos Módulos (v2.2.4)
 
 ### 1. 📅 Agenda Bimestral y Reservas en Tiempo Real
 *   **Gestión por Áreas**: Soporte para múltiples roles técnicos: *Cámaras, Switchers, Visuales, Iluminación, Fotografía, Streaming, Sonido, Edición, Protocolos y Diseño*.
@@ -42,7 +42,7 @@ El sistema unifica la agenda de servicios bimestrales, el control de asistencia,
 *   Al hacer clic en "Iniciar Curso", el video se carga de forma instantánea en el reproductor principal con animaciones suaves y se desplaza automáticamente hacia la pantalla de visualización.
 
 ### 6. 🚀 Control de Versiones PWA y Actualizaciones Instantáneas
-*   **Indicador de Versión**: Visibilidad en el menú lateral de la versión activa de la PWA (ej: `v2.2.3`).
+*   **Indicador de Versión**: Visibilidad en el menú lateral de la versión activa de la PWA (ej: `v2.2.4`).
 *   **Actualizaciones con un clic**: La PWA detecta silenciosamente cambios en el Service Worker. Al haber una nueva versión disponible en el servidor, despliega un banner interactivo en la esquina del Dashboard: *"🚀 Actualización Disponible. Nueva versión lista para instalar. [Actualizar]"*.
 *   Al presionar "Actualizar", la PWA ejecuta `skipWaiting()`, purga las cachés antiguas e instala la nueva versión refrescando el navegador instantáneamente sin necesidad de intervención manual o de reinstalar el aplicativo.
 
@@ -125,12 +125,12 @@ Cuando realice cambios en el código (HTML, CSS o JS) y desee que los usuarios f
 
 1.  Abra el archivo [sw.js](file:///c:/Users/LpLeonnnc/Documents/web/produccion/sw.js) y modifique la constante `CACHE_NAME` incrementando el número de versión:
     ```javascript
-    const CACHE_NAME = 'produc-v11'; // Cambiar de v10 a v11
+    const CACHE_NAME = 'produc-v12'; // Cambiar de v11 a v12
     ```
 2.  Abra [dashboard.html](file:///c:/Users/LpLeonnnc/Documents/web/produccion/dashboard.html) y modifique el número de versión visualizado en el pie de página de la barra lateral:
     ```html
     <div style="font-size: 0.72rem; color: var(--text-muted); margin-top: 15px; border-top: 1px solid var(--panel-border); padding-top: 8px;">
-        Versión v2.2.3
+        Versión v2.2.4
     </div>
     ```
 3.  Suba los cambios a su hosting de producción. El navegador de los usuarios detectará automáticamente el cambio en `sw.js`, descargará en segundo plano los nuevos archivos, y desplegará el popup flotante para aplicar la actualización en un clic.
