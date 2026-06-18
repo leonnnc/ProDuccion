@@ -1,7 +1,7 @@
 // ==========================================
-// SERVICE WORKER — ProDUC PWA  v2
+// SERVICE WORKER — ProDuccion PWA
 // ==========================================
-const CACHE_NAME = 'produc-v6';
+const CACHE_NAME = 'produc-v9';
 
 // Assets estáticos que se cachean al instalar
 const STATIC_ASSETS = [
@@ -97,5 +97,12 @@ self.addEventListener('fetch', (e) => {
                 })
                 .catch(() => caches.match(e.request))
         );
+    }
+});
+
+// Listener para forzar la actualización inmediata (PWA update-on-click)
+self.addEventListener('message', (event) => {
+    if (event.data && event.data.action === 'skipWaiting') {
+        self.skipWaiting();
     }
 });

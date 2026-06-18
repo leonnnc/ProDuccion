@@ -1,7 +1,7 @@
 {
-  "name": "ProDUC — Sistema de Producción",
-  "short_name": "ProDUC",
-  "description": "Sistema ERP para el equipo de producción",
+  "name": "ProDuccion — Sistema de Producción",
+  "short_name": "ProDuccion",
+  "description": "Sistema ERP para el equipo de ProDuccion",
   "start_url": "/index.html",
   "display": "standalone",
   "background_color": "#05050A",

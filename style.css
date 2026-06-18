@@ -140,11 +140,13 @@ body {
 /* Forms */
 .form-row {
     display: flex;
+    flex-wrap: wrap;          /* Permite que las columnas se envuelvan a la siguiente línea si no hay espacio */
     gap: 15px;
 }
 
 .form-row .input-group {
     flex: 1;
+    min-width: 180px;         /* Tamaño mínimo para forzar el apilamiento responsive en pantallas angostas */
 }
 
 .input-group {
@@ -1428,6 +1430,9 @@ body {
     z-index: 1000;
     opacity: 1;
     transition: opacity 0.3s ease;
+    overflow-y: auto;          /* Habilita el scroll vertical cuando el modal es más alto que la pantalla */
+    padding: 20px 10px;        /* Espaciado para que no se pegue a los bordes de la pantalla */
+    box-sizing: border-box;
 }
 
 .modal.hidden {
@@ -1438,12 +1443,15 @@ body {
 
 .modal-content {
     background: var(--panel-bg);
-    width: 90%;
+    width: 95%;
     max-width: 500px;
-    padding: 30px;
+    padding: 24px;
     position: relative;
     transform: translateY(0);
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    margin: auto;              /* Clave para centrado en flexbox con soporte de desbordamiento (overflow) */
+    border-radius: 12px;
+    box-sizing: border-box;
 }
 
 .modal.hidden .modal-content {

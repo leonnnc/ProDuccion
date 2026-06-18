@@ -4,17 +4,78 @@
 import { DB, AUTH, STORAGE } from './firebase.js';
 import { hashPassword, showNotification } from './utils.js';
 
-// Registrar Service Worker para PWA
+const APP_VERSION = '2.2.0';
+
+// Registrar Service Worker para PWA con soporte de actualización rápida (update-on-click)
 if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+        if (reg.waiting) {
+            notificarActualizacionDisponible(reg.waiting);
+        }
+        reg.onupdatefound = () => {
+            const installingWorker = reg.installing;
+            if (installingWorker) {
+                installingWorker.onstatechange = () => {
+                    if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                        notificarActualizacionDisponible(installingWorker);
+                    }
+                };
+            }
+        };
+    }).catch(() => {});
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
+    });
+}
+
+function notificarActualizacionDisponible(worker) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; bottom: 24px; right: 24px;
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+        color: white; padding: 16px 20px; border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        z-index: 9999; display: flex; align-items: center; gap: 15px;
+        border: 1px solid rgba(79, 172, 254, 0.4); font-family: 'Outfit', sans-serif;
+        animation: slideInSW 0.3s ease-out;
+    `;
+    
+    const styleAnim = document.createElement('style');
+    styleAnim.textContent = `
+        @keyframes slideInSW {
+            from { transform: translateY(50px) scale(0.9); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(styleAnim);
+
+    toast.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:4px;">
+            <span style="font-weight:700; font-size:0.92rem; color:#4facfe;">🚀 Actualización Disponible</span>
+            <span style="font-size:0.8rem; opacity:0.8;">Nueva versión de ProDuccion lista para instalar.</span>
+        </div>
+        <button id="btn-actualizar-ahora" class="btn-primary" style="padding: 8px 14px; font-size: 0.78rem; border-radius: 8px; font-weight: 600; white-space: nowrap;">Actualizar</button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    document.getElementById('btn-actualizar-ahora')?.addEventListener('click', () => {
+        worker.postMessage({ action: 'skipWaiting' });
+    });
 }
 
 // ─── CAPA DE COMPATIBILIDAD localStorage ↔ Firebase ─────
 // Sincroniza Firebase → localStorage al cargar, y localStorage → Firebase al escribir
 const SYNC_KEYS = [
     'usuarios_registrados','proyectos_creados',
-    'servicios_reservados','asistencias_proyectos','aceptaciones_tareas',
-    'comentarios','recursos_pdfs','recursos_videos','lideres_area'
+    'servicios_reservados','asistencias_proyectos',
+    'comentarios','recursos_pdfs','recursos_videos','lideres_area',
+    'mural_agradecimientos'
 ];
 
 // Parchear localStorage.setItem para sincronizar a Firebase automáticamente
@@ -31,11 +92,11 @@ localStorage.setItem = function(key, value) {
             'proyectos_creados':    () => DB.setProyectos(data),
             'servicios_reservados': () => DB.setServicios(data),
             'asistencias_proyectos':() => DB.setAsistencias(data),
-            'aceptaciones_tareas':  () => DB.setAceptaciones(data),
             'comentarios':          () => DB.setComentarios(data),
             'recursos_pdfs':        () => DB.setPdfs(data),
             'recursos_videos':      () => DB.setVideos(data),
             'lideres_area':         () => DB.setLideres(data),
+            'mural_agradecimientos':() => DB.setMural(data),
         };
         if (writeMap[key]) writeMap[key]().catch(() => {});
     } catch(e) {}
@@ -62,20 +123,20 @@ let appReady = false;
 
 async function sincronizarDesdeFirebase() {
     // Sincronización inicial — carga todos los datos antes de renderizar
-    const [usr, proy, serv, asi, acep, com, pdfs, vids, lid] = await Promise.all([
+    const [usr, proy, serv, asi, com, pdfs, vids, lid, mur] = await Promise.all([
         DB.getUsuarios(), DB.getProyectos(), DB.getServicios(),
-        DB.getAsistencias(), DB.getAceptaciones(), DB.getComentarios(),
-        DB.getPdfs(), DB.getVideos(), DB.getLideres()
+        DB.getAsistencias(), DB.getComentarios(),
+        DB.getPdfs(), DB.getVideos(), DB.getLideres(), DB.getMural()
     ]);
     updateLocalCache('usuarios_registrados', usr);
     updateLocalCache('proyectos_creados', proy);
     updateLocalCache('servicios_reservados', serv);
     updateLocalCache('asistencias_proyectos', asi);
-    updateLocalCache('aceptaciones_tareas', acep);
     updateLocalCache('comentarios', com);
     updateLocalCache('recursos_pdfs', pdfs);
     updateLocalCache('recursos_videos', vids);
     updateLocalCache('lideres_area', lid);
+    updateLocalCache('mural_agradecimientos', mur);
 
     // Listeners en tiempo real — solo actualizan UI cuando appReady=true
     // Usan window.* para evitar referencias a funciones no definidas aún
@@ -97,12 +158,18 @@ async function sincronizarDesdeFirebase() {
         if (!appReady) return;
         if (window._renderReservas)          window._renderReservas();
         if (window._actualizarEstadisticas)  window._actualizarEstadisticas();
+        if (window._renderAgenda)            window._renderAgenda();
     });
     DB.listenPdfs(d => {
         updateLocalCache('recursos_pdfs', d);
         if (!appReady) return;
         if (window._renderDashProgramacion)  window._renderDashProgramacion();
         if (window._renderRecursos)          window._renderRecursos();
+    });
+    DB.listenMural(d => {
+        updateLocalCache('mural_agradecimientos', d);
+        if (!appReady) return;
+        if (window._renderMuralAgradecimientos) window._renderMuralAgradecimientos();
     });
     DB.listenVideos(d => {
         updateLocalCache('recursos_videos', d);
@@ -238,10 +305,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const esLider = sesion.rol === 'Lider';
 
     const permitido = {
-        'Admin':      ['dashboard-view','usuarios-view','proyectos-view','agenda-view','asistencia-view','programacion-view','aprende-view','transmision-view','chat-view','ajustes-view'],
-        'SuperLider': ['dashboard-view','usuarios-view','proyectos-view','agenda-view','asistencia-view','programacion-view','aprende-view','transmision-view','chat-view','ajustes-view'],
-        'Lider':      ['dashboard-view','usuarios-view','agenda-view','asistencia-view','programacion-view','aprende-view','transmision-view','chat-view'],
-        'Siervo':     ['dashboard-view','agenda-view','programacion-view','aprende-view','transmision-view','chat-view']
+        'Admin':      ['dashboard-view','usuarios-view','proyectos-view','agenda-view','asistencia-view','programacion-view','transmision-view','aprende-view','chat-view','ajustes-view'],
+        'SuperLider': ['dashboard-view','usuarios-view','proyectos-view','agenda-view','asistencia-view','programacion-view','transmision-view','aprende-view','chat-view','ajustes-view'],
+        'Lider':      ['dashboard-view','usuarios-view','agenda-view','asistencia-view','programacion-view','transmision-view','aprende-view','chat-view'],
+        'Siervo':     ['dashboard-view','agenda-view','programacion-view','transmision-view','aprende-view','chat-view']
     };
     const acceso = permitido[sesion.rol] || permitido['Siervo'];
     document.querySelectorAll('.sidebar-nav .nav-link').forEach(link => {
@@ -278,12 +345,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Regenerar agenda al navegar a ella
         if (targetId === 'agenda-view') setTimeout(() => generateAgendaMonth(), 100);
         
-        // Manejar autoplay de transmisión en vivo
+        // Manejar autoplay de transmision
         if (targetId === 'transmision-view') {
-            if (window._renderTransmisionView) window._renderTransmisionView();
+            if (typeof renderTransmisionView === 'function') renderTransmisionView();
         } else {
-            const iframe = document.getElementById('transmision-iframe');
-            if (iframe) iframe.src = '';
+            // Detener transmision si se navega a otra pestaña
+            const tIframe = document.getElementById('transmision-iframe');
+            if (tIframe) tIframe.src = '';
         }
     }
 
@@ -1203,8 +1271,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         const sesionActual = JSON.parse(sessionStorage.getItem('sesion_activa') || 'null');
         const userName = sesionActual?.nombre || '';
         const serviciosGuardados = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
-        const misReservas = new Set(serviciosGuardados.filter(s => s.usuario === userName).map(s => s.servicio));
-        const esAdminAgenda = sesionActual?.rol === 'Admin' || sesionActual?.rol === 'SuperLider' || sesionActual?.rol === 'Lider';
+        const misReservas = new Set(serviciosGuardados
+            .filter(s => s.correo ? s.correo.toLowerCase() === sesion.correo.toLowerCase() : s.usuario === userName)
+            .map(s => s.servicio)
+        );
 
         // Obtener días del mes actual y del siguiente
         const allDays0 = getMonthDays(0);
@@ -1260,8 +1330,19 @@ document.addEventListener('DOMContentLoaded', async () => {
                     const id       = `${prefix}-${ti}-${di}`;
                     const expirado = servicioExpirado(d, time);
                     const isReserved = misReservas.has(value);
-                    const dStrLocal = new Date(d.getTime() - (d.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+                    const dStrLocal = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
                     const esAusente = misAusencias.includes(dStrLocal);
+
+                    // Buscar compañeros anotados en el mismo slot (Excluyendo al usuario actual)
+                    const companeros = serviciosGuardados.filter(s => s.servicio === value && (s.correo ? s.correo.toLowerCase() !== sesion.correo.toLowerCase() : s.usuario !== userName));
+                    let companerosHtml = '';
+                    if (companeros.length > 0) {
+                        const listaNombres = companeros.map(c => `${c.usuario} (${c.area || 'Sin área'})${c.confirmado ? ' ✔' : ''}`).join('\n');
+                        companerosHtml = `<div class="companeros-badge" title="Compañeros anotados:\n${listaNombres}" style="margin-top:4px;font-size:0.7rem;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:2px;cursor:help;">
+                            <span>👥</span>
+                            <span style="font-weight:600;color:var(--primary-color);">${companeros.length}</span>
+                        </div>`;
+                    }
 
                     if (expirado) {
                         t += `<td class="text-center agenda-cell-${colorClass}" style="vertical-align:middle;opacity:0.35;">
@@ -1271,17 +1352,21 @@ document.addEventListener('DOMContentLoaded', async () => {
                         t += `<td class="text-center agenda-cell-${colorClass}" style="vertical-align:middle;">
                             <span class="time-label compact-label" style="background:rgba(255,71,87,0.1);border-color:#ff4757;color:#ff4757;cursor:not-allowed;" title="Marcaste este día como No Disponible en tu perfil">No Disponible</span>
                         </td>`;
-                    } else if (isReserved && esAdminAgenda) {
+                    } else if (isReserved) {
+                        const miReservaObj = serviciosGuardados.find(s => s.servicio === value && (s.correo ? s.correo.toLowerCase() === sesion.correo.toLowerCase() : s.usuario === userName));
+                        const estaConfirmado = miReservaObj && miReservaObj.confirmado === true;
                         t += `<td class="text-center agenda-cell-${colorClass}" style="vertical-align:middle;">
                             <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-                                <span class="time-label compact-label" style="background:rgba(46,213,115,0.2);border-color:#2ed573;color:#2ed573;cursor:default;">✓ Reservado</span>
-                                <button class="btn-cancelar-reserva" data-value="${value}" data-usuario="${userName}" style="font-size:0.65rem;padding:2px 8px;background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.4);color:#ff4757;border-radius:6px;cursor:pointer;">✕ Quitar</button>
+                                <span class="time-label compact-label" style="background:${estaConfirmado ? 'rgba(46,213,115,0.2)' : 'rgba(255,159,67,0.15)'};border-color:${estaConfirmado ? '#2ed573' : '#ff9f43'};color:${estaConfirmado ? '#2ed573' : '#ff9f43'};cursor:default;">${estaConfirmado ? '✔ Confirmado' : '✓ Reservado'}</span>
+                                <button class="btn-cancelar-reserva" data-value="${value}" data-usuario="${userName}" data-correo="${sesion.correo}" style="font-size:0.65rem;padding:2px 8px;background:rgba(255,71,87,0.15);border:1px solid rgba(255,71,87,0.4);color:#ff4757;border-radius:6px;cursor:pointer;">✕ Quitar</button>
                             </div>
+                            ${companerosHtml}
                         </td>`;
                     } else {
                         t += `<td class="text-center agenda-cell-${colorClass}" style="vertical-align:middle;">
-                            <input type="checkbox" id="${id}" name="agenda-servicios[]" value="${value}" class="time-checkbox" ${isReserved ? 'checked disabled' : ''}>
-                            <label for="${id}" class="time-label compact-label">${isReserved ? '✓' : 'Reservar'}</label>
+                            <input type="checkbox" id="${id}" name="agenda-servicios[]" value="${value}" class="time-checkbox">
+                            <label for="${id}" class="time-label compact-label">Reservar</label>
+                            ${companerosHtml}
                         </td>`;
                     }
                 });
@@ -1351,12 +1436,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     generateAgendaMonth();
 
-    // Handler para quitar reservas propias (Admin/SuperLider/Lider)
+    // Handler para quitar reservas propias (Todos los roles)
     document.getElementById('agenda-dynamic-container')?.addEventListener('click', (e) => {
         const btn = e.target.closest('.btn-cancelar-reserva');
         if (!btn) return;
         const value   = btn.dataset.value;
         const usuario = btn.dataset.usuario;
+        const correo  = btn.dataset.correo || '';
 
         // Lider solo puede quitar reservas de siervos de su área
         if (sesion.rol === 'Lider') {
@@ -1370,7 +1456,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         confirmar('Quitar reserva', `¿Quitar la reserva de "${usuario}" para "${value}"?`, () => {
             let servicios = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
-            servicios = servicios.filter(s => !(s.servicio === value && s.usuario === usuario));
+            servicios = servicios.filter(s => {
+                const matchServ = s.servicio === value;
+                const matchUser = correo ? s.correo?.toLowerCase() === correo.toLowerCase() : s.usuario === usuario;
+                return !(matchServ && matchUser);
+            });
             localStorage.setItem('servicios_reservados', JSON.stringify(servicios));
             showNotification(`Reserva de "${usuario}" eliminada.`);
             generateAgendaMonth();
@@ -1428,7 +1518,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         const servicios = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
         
         selected.forEach(opt => {
-            servicios.push({ servicio: opt.value, usuario: userName, area: sesion.area || '', fecha: new Date().toISOString() });
+            servicios.push({ 
+                servicio: opt.value, 
+                usuario: userName, 
+                correo: sesion.correo, 
+                area: sesion.area || '', 
+                fecha: new Date().toISOString() 
+            });
         });
         localStorage.setItem('servicios_reservados', JSON.stringify(servicios));
         
@@ -1463,7 +1559,9 @@ document.addEventListener('DOMContentLoaded', async () => {
      */
     const MESES_MAP = {
         'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
-        'julio': 6, 'agosto': 7, 'septiembre': 8, 'setiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11
+        'julio': 6, 'agosto': 7, 'septiembre': 8, 'setiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11,
+        'january': 0, 'february': 1, 'march': 2, 'april': 3, 'may': 4, 'june': 5,
+        'july': 6, 'august': 7, 'september': 8, 'october': 9, 'november': 10, 'december': 11
     };
 
     function servicioToDate(servicioStr, fechaReservaISO) {
@@ -1479,15 +1577,29 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (period === 'PM' && h !== 12) h += 12;
             if (period === 'AM' && h === 12) h = 0;
 
-            const mesIndex = MESES_MAP[mesNombre.toLowerCase().trim()];
+            const mesNombreSanitizado = mesNombre.toLowerCase().replace(/[^a-zñáéíóú]/g, '').trim();
+            const mesIndex = MESES_MAP[mesNombreSanitizado];
             if (mesIndex === undefined) return null;
 
             const ref = fechaReservaISO ? new Date(fechaReservaISO) : new Date();
             let anio = ref.getFullYear();
-            if (ref.getMonth() === 11 && mesIndex === 0) anio++;
-            if (ref.getMonth() === 0 && mesIndex === 11) anio--;
-
-            return new Date(anio, mesIndex, parseInt(numDia), h, min, 0, 0);
+            
+            // Probar año actual, año anterior y año siguiente para encontrar el más cercano al momento de reserva
+            const dActual = new Date(anio, mesIndex, parseInt(numDia), h, min, 0, 0);
+            const dAnterior = new Date(anio - 1, mesIndex, parseInt(numDia), h, min, 0, 0);
+            const dSiguiente = new Date(anio + 1, mesIndex, parseInt(numDia), h, min, 0, 0);
+            
+            const diffActual = Math.abs(dActual.getTime() - ref.getTime());
+            const diffAnterior = Math.abs(dAnterior.getTime() - ref.getTime());
+            const diffSiguiente = Math.abs(dSiguiente.getTime() - ref.getTime());
+            
+            if (diffAnterior < diffActual && diffAnterior < diffSiguiente) {
+                return dAnterior;
+            } else if (diffSiguiente < diffActual && diffSiguiente < diffAnterior) {
+                return dSiguiente;
+            } else {
+                return dActual;
+            }
         }
 
         // Formato heredado: "Domingo 7 a las 7:30 AM"
@@ -1653,9 +1765,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 let botones = '';
                 if (puedeEliminar(s)) {
                     if (!isAusente) {
-                        botones += `<button class="btn-falto-reserva-dash" data-servicio="${s.servicio}" data-usuario="${s.usuario}" style="flex-shrink:0;padding:2px 8px;font-size:0.7rem;background:rgba(255,165,2,0.12);border:1px solid rgba(255,165,2,0.35);color:#ffa502;border-radius:6px;cursor:pointer;margin-right:4px;">Faltó ❌</button>`;
+                        botones += `<button class="btn-falto-reserva-dash" data-servicio="${s.servicio}" data-usuario="${s.usuario}" data-correo="${s.correo || ''}" style="flex-shrink:0;padding:2px 8px;font-size:0.7rem;background:rgba(255,165,2,0.12);border:1px solid rgba(255,165,2,0.35);color:#ffa502;border-radius:6px;cursor:pointer;margin-right:4px;">Faltó ❌</button>`;
                     }
-                    botones += `<button class="btn-eliminar-reserva-dash" data-servicio="${s.servicio}" data-usuario="${s.usuario}" style="flex-shrink:0;padding:2px 8px;font-size:0.7rem;background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);color:#ff4757;border-radius:6px;cursor:pointer;">🗑️</button>`;
+                    botones += `<button class="btn-eliminar-reserva-dash" data-servicio="${s.servicio}" data-usuario="${s.usuario}" data-correo="${s.correo || ''}" style="flex-shrink:0;padding:2px 8px;font-size:0.7rem;background:rgba(255,71,87,0.12);border:1px solid rgba(255,71,87,0.35);color:#ff4757;border-radius:6px;cursor:pointer;">🗑️</button>`;
                 }
 
                 li.innerHTML = `
@@ -1681,13 +1793,19 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (btnEliminar) {
             const servicio = btnEliminar.dataset.servicio;
             const usuario  = btnEliminar.dataset.usuario;
+            const correo   = btnEliminar.dataset.correo || '';
             confirmar('Quitar reserva', `¿Quitar la reserva de "${usuario}" para "${servicio}"?`, () => {
                 let servicios = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
-                servicios = servicios.filter(s => !(s.servicio === servicio && s.usuario === usuario));
+                servicios = servicios.filter(s => {
+                    const matchServ = s.servicio === servicio;
+                    const matchUser = correo ? s.correo?.toLowerCase() === correo.toLowerCase() : s.usuario === usuario;
+                    return !(matchServ && matchUser);
+                });
                 localStorage.setItem('servicios_reservados', JSON.stringify(servicios));
                 showNotification(`Reserva de "${usuario}" eliminada.`);
                 renderReservasSemana();
                 actualizarEstadisticas();
+                if (typeof generateAgendaMonth === 'function') generateAgendaMonth();
             });
             return;
         }
@@ -1695,14 +1813,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (btnFalto) {
             const servicio = btnFalto.dataset.servicio;
             const usuario  = btnFalto.dataset.usuario;
+            const correo   = btnFalto.dataset.correo || '';
             confirmar('Marcar Inasistencia', `¿Confirmas que "${usuario}" faltó a "${servicio}"?`, () => {
                 let servicios = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
-                const idx = servicios.findIndex(s => s.servicio === servicio && s.usuario === usuario);
+                const idx = servicios.findIndex(s => {
+                    const matchServ = s.servicio === servicio;
+                    const matchUser = correo ? s.correo?.toLowerCase() === correo.toLowerCase() : s.usuario === usuario;
+                    return matchServ && matchUser;
+                });
                 if (idx !== -1) {
                     servicios[idx].ausente = true;
                     localStorage.setItem('servicios_reservados', JSON.stringify(servicios));
                     showNotification(`Se marcó la falta de "${usuario}".`);
                     renderReservasSemana();
+                    actualizarEstadisticas();
+                    if (typeof generateAgendaMonth === 'function') generateAgendaMonth();
                 }
             });
         }
@@ -2176,6 +2301,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderAusenciasTemporales();
 
         renderHistorialAsistencia();
+        if (typeof renderPerfilMedallasYProgreso === 'function') renderPerfilMedallasYProgreso(u);
     }
 
     function renderAusenciasTemporales() {
@@ -3306,6 +3432,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     window._renderRecursos          = () => renderRecursos();
     window._renderRecursosPDFs      = () => renderRecursos();
     window._renderChatUsers         = () => renderChatUsers();
+    window._renderAgenda            = () => generateAgendaMonth();
 
     // ─── BROADCAST DE CHAT (Admin / SuperLíder / Líder) ─────────
     const puedeHacerBroadcast = sesion.rol === 'Admin' || sesion.rol === 'SuperLider' || sesion.rol === 'Lider';
@@ -3397,7 +3524,591 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    // ─── TRANSMISION EN VIVO ─────────────────────────────
+    // Función interactiva para cambiar el video de capacitación en la pestaña Aprende
+    window.cargarCursoEnReproductor = function(videoId, titulo, descripcion, area) {
+        const iframe = document.getElementById('aprende-iframe-principal');
+        const h3 = document.getElementById('aprende-titulo-principal');
+        const p = document.getElementById('aprende-desc-principal');
+        const badge = document.getElementById('aprende-badge-area');
+        
+        if (iframe) iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+        if (h3) h3.textContent = titulo;
+        if (p) p.textContent = descripcion;
+        
+        if (badge) {
+            badge.textContent = area;
+            // Configurar colores específicos del badge según área
+            if (area === 'Cámaras') {
+                badge.style.background = 'rgba(46, 213, 115, 0.15)';
+                badge.style.color = '#2ed573';
+                badge.style.borderColor = 'rgba(46, 213, 115, 0.3)';
+            } else if (area === 'Fotografía') {
+                badge.style.background = 'rgba(255, 71, 87, 0.15)';
+                badge.style.color = '#ff4757';
+                badge.style.borderColor = 'rgba(255, 71, 87, 0.3)';
+            } else if (area === 'Switchers') {
+                badge.style.background = 'rgba(255, 159, 67, 0.15)';
+                badge.style.color = '#ff9f43';
+                badge.style.borderColor = 'rgba(255, 159, 67, 0.3)';
+            } else {
+                badge.style.background = 'rgba(79, 172, 254, 0.15)';
+                badge.style.color = '#4facfe';
+                badge.style.borderColor = 'rgba(79, 172, 254, 0.3)';
+            }
+        }
+        
+        // Desplazar al reproductor de forma interactiva
+        document.getElementById('aprende-reproductor-panel')?.scrollIntoView({ behavior: 'smooth' });
+    };
+
+    // ─── AUTO-ARCHIVADO PDFs: check cada minuto ───────────────
+    // esPdfExpirado ya está definido arriba — solo conectamos un intervalo
+    setInterval(() => {
+        if (window._renderRecursosPDFs) window._renderRecursosPDFs();
+        renderDashProgramacion();
+    }, 60000);
+
+    // Variable global para rastrear el ID del video actualmente cargado en Aprende
+    window._currentVideoId = 'J5-vGkP_T_Q'; // Por defecto inducción
+
+    // Función interactiva para cambiar el video de capacitación en la pestaña Aprende
+    const originalCargarCurso = window.cargarCursoEnReproductor;
+    window.cargarCursoEnReproductor = function(videoId, titulo, descripcion, area) {
+        window._currentVideoId = videoId;
+        if (typeof originalCargarCurso === 'function') {
+            originalCargarCurso(videoId, titulo, descripcion, area);
+        } else {
+            const iframe = document.getElementById('aprende-iframe-principal');
+            const h3 = document.getElementById('aprende-titulo-principal');
+            const p = document.getElementById('aprende-desc-principal');
+            const badge = document.getElementById('aprende-badge-area');
+            if (iframe) iframe.src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            if (h3) h3.textContent = titulo;
+            if (p) p.textContent = descripcion;
+            if (badge) {
+                badge.textContent = area;
+                if (area === 'Cámaras') {
+                    badge.style.background = 'rgba(46, 213, 115, 0.15)';
+                    badge.style.color = '#2ed573';
+                    badge.style.borderColor = 'rgba(46, 213, 115, 0.3)';
+                } else if (area === 'Fotografía') {
+                    badge.style.background = 'rgba(255, 71, 87, 0.15)';
+                    badge.style.color = '#ff4757';
+                    badge.style.borderColor = 'rgba(255, 71, 87, 0.3)';
+                } else if (area === 'Switchers') {
+                    badge.style.background = 'rgba(255, 159, 67, 0.15)';
+                    badge.style.color = '#ff9f43';
+                    badge.style.borderColor = 'rgba(255, 159, 67, 0.3)';
+                } else {
+                    badge.style.background = 'rgba(79, 172, 254, 0.15)';
+                    badge.style.color = '#4facfe';
+                    badge.style.borderColor = 'rgba(79, 172, 254, 0.3)';
+                }
+            }
+            document.getElementById('aprende-reproductor-panel')?.scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        // Actualizar estado visual del botón de marcado como completado
+        const usuarios = JSON.parse(localStorage.getItem('usuarios_registrados') || '[]');
+        const u = usuarios.find(x => x.correo.toLowerCase() === sesion.correo.toLowerCase());
+        const comp = u?.capacitaciones_completadas || [];
+        const btn = document.getElementById('btn-completar-capacitacion');
+        if (btn) {
+            if (comp.includes(videoId)) {
+                btn.textContent = '✓ Curso Completado';
+                btn.style.background = 'rgba(46, 213, 115, 0.2)';
+                btn.style.borderColor = '#2ed573';
+                btn.style.color = '#2ed573';
+                btn.disabled = true;
+            } else {
+                btn.textContent = '✓ Marcar curso como completado';
+                btn.style.background = '';
+                btn.style.borderColor = '';
+                btn.style.color = '';
+                btn.disabled = false;
+            }
+        }
+    };
+
+    // ─── RUTA DE ONBOARDING: marcar curso como completado ─────
+    window.completarCursoCapacitacion = function() {
+        const videoId = window._currentVideoId;
+        if (!videoId) return;
+
+        const usuarios = JSON.parse(localStorage.getItem('usuarios_registrados') || '[]');
+        const idx = usuarios.findIndex(u => u.correo.toLowerCase() === sesion.correo.toLowerCase());
+        if (idx === -1) return;
+
+        if (!usuarios[idx].capacitaciones_completadas) {
+            usuarios[idx].capacitaciones_completadas = [];
+        }
+
+        if (!usuarios[idx].capacitaciones_completadas.includes(videoId)) {
+            usuarios[idx].capacitaciones_completadas.push(videoId);
+            localStorage.setItem('usuarios_registrados', JSON.stringify(usuarios));
+            showNotification('🎉 ¡Curso marcado como completado! Revisa tu Perfil para ver tus logros.');
+            
+            // Actualizar interfaz del botón
+            const btn = document.getElementById('btn-completar-capacitacion');
+            if (btn) {
+                btn.textContent = '✓ Curso Completado';
+                btn.style.background = 'rgba(46, 213, 115, 0.2)';
+                btn.style.borderColor = '#2ed573';
+                btn.style.color = '#2ed573';
+                btn.disabled = true;
+            }
+
+            // Despachar notificación del sistema local
+            despacharNotificacionNativa('ProDuccion - Logro Desbloqueado', '¡Felicidades! Has desbloqueado una nueva medalla en tu perfil de servidor.');
+        }
+    };
+
+    // ─── GAMIFICACIÓN: render medallas y progreso en Perfil ───
+    window.renderPerfilMedallasYProgreso = function(u) {
+        const pctText = document.getElementById('perfil-onboarding-pct');
+        const barEl = document.getElementById('perfil-onboarding-bar');
+        const listEl = document.getElementById('perfil-medallas-list');
+        if (!listEl) return;
+
+        listEl.innerHTML = '';
+
+        // Cursos base del sistema (los IDs de YouTube del plan de Aprende)
+        const cursosBase = ['J5-vGkP_T_Q', 'nN4Mv3e_eDk', '2T9p3fE9M94', '3g5b3t_465o'];
+        const completados = u?.capacitaciones_completadas || [];
+        
+        // Calcular porcentaje de onboarding
+        const compCount = cursosBase.filter(c => completados.includes(c)).length;
+        const pct = Math.round((compCount / cursosBase.length) * 100);
+        if (pctText) pctText.textContent = `${pct}%`;
+        if (barEl) barEl.style.width = `${pct}%`;
+
+        // Medallas y condiciones
+        const medallas = [];
+
+        // 1. Especialista Capacitado
+        const areaMapVideos = {
+            'Switchers': 'nN4Mv3e_eDk',
+            'Fotografía': '2T9p3fE9M94',
+            'Coordinación': 'J5-vGkP_T_Q',
+            'Streaming': '3g5b3t_465o'
+        };
+        const videoRequerido = areaMapVideos[u.area] || 'J5-vGkP_T_Q';
+        if (completados.includes(videoRequerido)) {
+            medallas.push({
+                nombre: 'Especialista Capacitado',
+                desc: `Completó el curso especializado para el área de ${u.area || 'General'}.`,
+                icono: '🎓',
+                color: '#4facfe',
+                bg: 'rgba(79, 172, 254, 0.15)'
+            });
+        }
+
+        // 2. Fiel Servidor (Asistencias)
+        const asistencias = JSON.parse(localStorage.getItem('asistencias_proyectos') || '{}');
+        const totalAsistencias = Object.entries(asistencias).filter(([k, v]) => k.startsWith(u.correo.toLowerCase()) && v === 'confirma').length;
+        
+        if (totalAsistencias >= 12) {
+            medallas.push({
+                nombre: 'Fiel Servidor - Oro',
+                desc: `Servidor de alta constancia con ${totalAsistencias} asistencias en ProDuccion.`,
+                icono: '🥇',
+                color: '#ffa500',
+                bg: 'rgba(255, 165, 0, 0.15)'
+            });
+        } else if (totalAsistencias >= 5) {
+            medallas.push({
+                nombre: 'Fiel Servidor - Plata',
+                desc: `Servidor constante con ${totalAsistencias} asistencias.`,
+                icono: '🥈',
+                color: '#ced4da',
+                bg: 'rgba(206, 212, 218, 0.15)'
+            });
+        } else if (totalAsistencias >= 1) {
+            medallas.push({
+                nombre: 'Fiel Servidor - Bronce',
+                desc: `Servidor activo con ${totalAsistencias} asistencia registrada.`,
+                icono: '🥉',
+                color: '#cd7f32',
+                bg: 'rgba(205, 127, 50, 0.15)'
+            });
+        }
+
+        // 3. Compromiso de Acero
+        const reservas = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
+        const proximasReservas = reservas.filter(s => s.correo?.toLowerCase() === u.correo.toLowerCase() && s.confirmado === true).length;
+        if (proximasReservas >= 3) {
+            medallas.push({
+                nombre: 'Compromiso de Acero',
+                desc: 'Tiene 3 o más servicios confirmados a futuro en la agenda.',
+                icono: '🌟',
+                color: '#ffa8a8',
+                bg: 'rgba(255, 168, 168, 0.15)'
+            });
+        }
+
+        // 4. Pilar del Equipo (Antigüedad)
+        const fechaRegistro = u.fecha ? new Date(u.fecha) : new Date();
+        const diasAntiguedad = Math.floor((new Date() - fechaRegistro) / (1000 * 60 * 60 * 24));
+        if (diasAntiguedad >= 30) {
+            medallas.push({
+                nombre: 'Pilar del Equipo',
+                desc: `Miembro del equipo de ProDuccion con más de 30 días de servicio registrado.`,
+                icono: '🛡️',
+                color: '#a18cd1',
+                bg: 'rgba(161, 140, 209, 0.15)'
+            });
+        }
+
+        if (medallas.length === 0) {
+            listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.78rem;">Participa en servicios y completa las capacitaciones para desbloquear medallas.</p>';
+            return;
+        }
+
+        medallas.forEach(m => {
+            const badge = document.createElement('div');
+            badge.style.cssText = `
+                display: flex; align-items: center; gap: 8px;
+                padding: 6px 12px; border-radius: 20px;
+                background: ${m.bg}; border: 1px solid rgba(79, 172, 254, 0.3);
+                font-family: 'Outfit', sans-serif;
+                cursor: help; transition: transform 0.2s;
+            `;
+            badge.title = m.desc;
+            badge.onmouseenter = () => badge.style.transform = 'scale(1.05)';
+            badge.onmouseleave = () => badge.style.transform = 'scale(1)';
+            badge.innerHTML = `<span style="font-size:1.1rem;">${m.icono}</span><span style="font-size:0.75rem; font-weight:600; color:${m.color};">${m.nombre}</span>`;
+            listEl.appendChild(badge);
+        });
+    }
+
+    // ─── PANEL: MI PRÓXIMO SERVICIO (DASHBOARD) ────────────────
+    function renderProximoServicio() {
+        const panel = document.getElementById('dash-proximo-servicio-panel');
+        if (!panel) return;
+
+        const userName = sesion.nombre;
+        const serviciosGuardados = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
+        const ahora = new Date();
+
+        // Buscar reservas del usuario en sesión que sean futuras
+        const misServicios = serviciosGuardados.filter(s => {
+            const matchUser = s.correo ? s.correo.toLowerCase() === sesion.correo.toLowerCase() : s.usuario === userName;
+            const f = servicioToDate(s.servicio, s.fecha);
+            return matchUser && f && f.getTime() + 2 * 60 * 60 * 1000 > ahora.getTime();
+        });
+
+        // Ordenar cronológicamente
+        misServicios.sort((a, b) => {
+            const da = servicioToDate(a.servicio, a.fecha);
+            const db = servicioToDate(b.servicio, b.fecha);
+            return (da ? da.getTime() : 0) - (db ? db.getTime() : 0);
+        });
+
+        const prox = misServicios[0];
+        if (!prox) {
+            panel.style.display = 'none';
+            return;
+        }
+
+        panel.style.display = 'block';
+        
+        // Formatear fecha descriptiva
+        const fDate = servicioToDate(prox.servicio, prox.fecha);
+        const formatOptions = { weekday: 'long', day: 'numeric', month: 'long' };
+        const fechaDescriptiva = fDate ? fDate.toLocaleDateString('es', formatOptions).replace(/^\w/, c => c.toUpperCase()) : prox.fecha;
+
+        // Buscar si existe un PDF de programación asignado a este servicio específico y su área
+        const pdfs = JSON.parse(localStorage.getItem('recursos_pdfs') || '[]');
+        
+        // Mapear servicio de agenda a clave de PDF
+        let pdfServicioKey = '';
+        if (prox.servicio.startsWith('Domingo')) {
+            if (prox.servicio.includes('1er Serv')) pdfServicioKey = 'dom-1';
+            else if (prox.servicio.includes('2do Serv')) pdfServicioKey = 'dom-2';
+            else if (prox.servicio.includes('3er Serv')) pdfServicioKey = 'dom-3';
+            else if (prox.servicio.includes('4to Serv')) pdfServicioKey = 'dom-4';
+        } else if (prox.servicio.startsWith('Miércoles')) {
+            pdfServicioKey = 'mie-1';
+        }
+
+        const pdfAsociado = pdfs.find(p => p.servicio === pdfServicioKey && !esPdfExpirado(p));
+
+        const badgeConfirmado = prox.confirmado
+            ? `<span style="background:rgba(46,213,115,0.15); border:1px solid rgba(46,213,115,0.3); color:#2ed573; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">✅ Asistencia Confirmada</span>`
+            : `<span style="background:rgba(255,159,67,0.15); border:1px solid rgba(255,159,67,0.3); color:#ff9f43; padding:4px 10px; border-radius:20px; font-size:0.75rem; font-weight:600; display:inline-flex; align-items:center; gap:4px;">⚠️ Confirmación Pendiente</span>`;
+
+        panel.innerHTML = `
+            <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:16px; padding:6px 0;">
+                <div style="flex:1; min-width:260px;">
+                    <h3 style="font-size:1.1rem; font-weight:700; margin-bottom:8px; color:var(--text-main); display:flex; align-items:center; gap:8px;">
+                        📅 Mi Próximo Servicio Asignado
+                    </h3>
+                    <h4 style="font-size:0.95rem; font-weight:600; margin-bottom:4px; color:var(--primary-color);">${prox.servicio}</h4>
+                    <p style="font-size:0.85rem; color:var(--text-muted);">${fechaDescriptiva}</p>
+                    <div style="margin-top:10px;">${badgeConfirmado}</div>
+                </div>
+                
+                <div style="display:flex; flex-direction:column; gap:8px; min-width:180px; align-items:stretch;">
+                    ${!prox.confirmado ? `
+                        <button class="btn-primary" id="btn-confirmar-servicio-dash" style="font-size:0.8rem; padding:8px 12px; border-radius:8px;">✓ Confirmar Asistencia</button>
+                    ` : ''}
+                    <button class="btn-danger" id="btn-cancelar-servicio-dash" style="font-size:0.8rem; padding:8px 12px; border-radius:8px; background:rgba(255,71,87,0.15); border-color:rgba(255,71,87,0.3); color:#ff4757;">✕ Reportar Inasistencia</button>
+                    ${pdfAsociado ? `
+                        <button class="btn-secondary" id="btn-descargar-pdf-dash" style="font-size:0.78rem; padding:8px 12px; border-radius:8px; display:flex; align-items:center; justify-content:center; gap:4px;">
+                            📄 Ver Programación
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+
+        // Conectar eventos de botones
+        document.getElementById('btn-confirmar-servicio-dash')?.addEventListener('click', () => {
+            let reservas = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
+            const idx = reservas.findIndex(r => r.servicio === prox.servicio && r.fecha === prox.fecha && (r.correo ? r.correo.toLowerCase() === sesion.correo.toLowerCase() : r.usuario === userName));
+            if (idx !== -1) {
+                reservas[idx].confirmado = true;
+                localStorage.setItem('servicios_reservados', JSON.stringify(reservas));
+                showNotification('¡Asistencia confirmada para tu próximo servicio! Muchas gracias.');
+                renderProximoServicio();
+                generateAgendaMonth();
+                renderReservasSemana();
+            }
+        });
+
+        document.getElementById('btn-cancelar-servicio-dash')?.addEventListener('click', () => {
+            confirmar('Cancelar participación', '¿Estás seguro de que no podrás asistir a este servicio?', () => {
+                let reservas = JSON.parse(localStorage.getItem('servicios_reservados') || '[]');
+                reservas = reservas.filter(r => {
+                    const matchUser = r.correo ? r.correo.toLowerCase() === sesion.correo.toLowerCase() : r.usuario === userName;
+                    return !(r.servicio === prox.servicio && r.fecha === prox.fecha && matchUser);
+                });
+                localStorage.setItem('servicios_reservados', JSON.stringify(reservas));
+                showNotification('Inasistencia reportada. Se notificó a tu líder de área.', 'warning');
+                renderProximoServicio();
+                generateAgendaMonth();
+                renderReservasSemana();
+                actualizarEstadisticas();
+            });
+        });
+
+        if (pdfAsociado) {
+            document.getElementById('btn-descargar-pdf-dash')?.addEventListener('click', () => {
+                abrirDocPreview(pdfAsociado);
+            });
+        }
+    }
+    window._renderProximoServicio = renderProximoServicio;
+
+    // ─── MURAL DE AGRADECIMIENTOS Y LOGROS ────────────────────
+    const btnMostrarPost = document.getElementById('btn-mostrar-post-agradecimiento');
+    const formContainer = document.getElementById('mural-post-form-container');
+    const btnCancelarPost = document.getElementById('btn-cancelar-post-agradecimiento');
+    const muralForm = document.getElementById('mural-post-form');
+
+    // Solo líderes/admin pueden postear agradecimientos
+    if (btnMostrarPost) {
+        btnMostrarPost.style.display = (esAdmin || esLider) ? 'inline-block' : 'none';
+        btnMostrarPost.addEventListener('click', () => {
+            formContainer.style.display = 'block';
+            btnMostrarPost.style.display = 'none';
+        });
+    }
+
+    if (btnCancelarPost) {
+        btnCancelarPost.addEventListener('click', () => {
+            formContainer.style.display = 'none';
+            btnMostrarPost.style.display = 'inline-block';
+            muralForm.reset();
+        });
+    }
+
+    if (muralForm) {
+        muralForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const titulo = document.getElementById('mural-post-titulo').value.trim();
+            const area = document.getElementById('mural-post-area').value;
+            const mensaje = document.getElementById('mural-post-mensaje').value.trim();
+
+            const post = {
+                id: Date.now().toString(),
+                autor: sesion.nombre,
+                rol: sesion.rol === 'Admin' ? 'Administrador' : sesion.rol === 'SuperLider' ? 'Super Líder' : 'Líder',
+                fecha: new Date().toISOString(),
+                titulo,
+                area,
+                mensaje,
+                reacciones: { love: 0, celebrate: 0, applaud: 0 }
+            };
+
+            const posts = JSON.parse(localStorage.getItem('mural_agradecimientos') || '[]');
+            posts.unshift(post); // Insertar al inicio (más recientes primero)
+            localStorage.setItem('mural_agradecimientos', JSON.stringify(posts));
+            
+            showNotification('¡Nota de agradecimiento publicada en el mural!');
+            formContainer.style.display = 'none';
+            btnMostrarPost.style.display = 'inline-block';
+            muralForm.reset();
+            renderMuralAgradecimientos();
+
+            // Enviar notificación al resto
+            despacharNotificacionNativa('ProDuccion - Nueva Nota de Agradecimiento', `${post.autor} publicó un mensaje de felicitaciones al equipo en el mural.`);
+        });
+    }
+
+    function renderMuralAgradecimientos() {
+        const listEl = document.getElementById('mural-agradecimientos-list');
+        if (!listEl) return;
+
+        const posts = JSON.parse(localStorage.getItem('mural_agradecimientos') || '[]');
+        listEl.innerHTML = '';
+
+        if (posts.length === 0) {
+            listEl.innerHTML = '<p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:20px;">Sin publicaciones en el mural aún. ¡Felicita al equipo por su servicio!</p>';
+            return;
+        }
+
+        posts.forEach((p, idx) => {
+            const card = document.createElement('div');
+            card.style.cssText = `
+                display: flex; gap: 16px; padding: 16px; border-radius: 12px;
+                border: 1px solid var(--panel-border); background: rgba(255, 255, 255, 0.015);
+                box-shadow: 0 4px 15px rgba(0,0,0,0.1); flex-wrap: wrap; margin-bottom:12px;
+            `;
+
+            // Configuración del badge de área
+            const areaColors = {
+                'General': { bg: 'rgba(79, 172, 254, 0.15)', color: '#4facfe', border: 'rgba(79, 172, 254, 0.3)' },
+                'Cámaras': { bg: 'rgba(46, 213, 115, 0.15)', color: '#2ed573', border: 'rgba(46, 213, 115, 0.3)' },
+                'Fotografía': { bg: 'rgba(255, 71, 87, 0.15)', color: '#ff4757', border: 'rgba(255, 71, 87, 0.3)' },
+                'Switchers': { bg: 'rgba(255, 159, 67, 0.15)', color: '#ff9f43', border: 'rgba(255, 159, 67, 0.3)' }
+            };
+            const col = areaColors[p.area] || areaColors['General'];
+            const badge = `<span style="background:${col.bg}; color:${col.color}; border:1px solid ${col.border}; padding:2px 8px; border-radius:10px; font-size:0.68rem; font-weight:600;">Para: ${p.area}</span>`;
+
+            const dateStr = new Date(p.fecha).toLocaleDateString('es', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+            
+            const love = p.reacciones?.love || 0;
+            const celebrate = p.reacciones?.celebrate || 0;
+            const applaud = p.reacciones?.applaud || 0;
+
+            card.innerHTML = `
+                <div style="width: 44px; height: 44px; border-radius: 50%; background: linear-gradient(135deg, var(--primary-color), var(--secondary-color)); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; font-weight: 800; color: white; flex-shrink: 0; box-shadow: 0 0 10px rgba(79,172,254,0.2);">
+                    ${p.autor.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase()}
+                </div>
+                
+                <div style="flex: 1; min-width: 240px; display: flex; flex-direction: column; gap: 6px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px;">
+                        <div>
+                            <span style="font-weight:700; font-size:0.92rem; color:var(--text-main); margin-right:6px;">${p.autor}</span>
+                            <span style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">(${p.rol})</span>
+                        </div>
+                        <span style="font-size:0.75rem; color:var(--text-muted);">${dateStr}</span>
+                    </div>
+                    
+                    <div style="display:flex; align-items:center; gap:8px; margin-top:2px;">
+                        <h4 style="font-size:0.88rem; font-weight:700; color:var(--primary-color);">${p.titulo}</h4>
+                        ${badge}
+                    </div>
+                    
+                    <p style="font-size:0.85rem; color:var(--text-main); line-height:1.5; margin-top:4px; font-style:italic;">
+                        "${p.mensaje}"
+                    </p>
+                    
+                    <!-- Botones de Reacciones -->
+                    <div style="display:flex; gap:8px; margin-top:10px;">
+                        <button class="btn-reaccion" data-id="${p.id}" data-type="love" style="display:flex; align-items:center; gap:4px; padding:4px 8px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; color:var(--text-main); cursor:pointer; transition:background 0.2s;">
+                            <span>❤️</span> <span>${love}</span>
+                        </button>
+                        <button class="btn-reaccion" data-id="${p.id}" data-type="celebrate" style="display:flex; align-items:center; gap:4px; padding:4px 8px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; color:var(--text-main); cursor:pointer; transition:background 0.2s;">
+                            <span>🙌</span> <span>${celebrate}</span>
+                        </button>
+                        <button class="btn-reaccion" data-id="${p.id}" data-type="applaud" style="display:flex; align-items:center; gap:4px; padding:4px 8px; font-size:0.75rem; background:rgba(255,255,255,0.02); border:1px solid rgba(255,255,255,0.08); border-radius:10px; color:var(--text-main); cursor:pointer; transition:background 0.2s;">
+                            <span>👏</span> <span>${applaud}</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+
+            // Conectar listeners de clics de reacciones
+            card.querySelectorAll('.btn-reaccion').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const id = btn.dataset.id;
+                    const type = btn.dataset.type;
+                    let mural = JSON.parse(localStorage.getItem('mural_agradecimientos') || '[]');
+                    const postIdx = mural.findIndex(m => m.id === id);
+                    if (postIdx !== -1) {
+                        if (!mural[postIdx].reacciones) mural[postIdx].reacciones = { love: 0, celebrate: 0, applaud: 0 };
+                        mural[postIdx].reacciones[type] = (mural[postIdx].reacciones[type] || 0) + 1;
+                        localStorage.setItem('mural_agradecimientos', JSON.stringify(mural));
+                        renderMuralAgradecimientos();
+                    }
+                });
+            });
+
+            listEl.appendChild(card);
+        });
+    }
+    window._renderMuralAgradecimientos = renderMuralAgradecimientos;
+
+    // ─── PWA NOTIFICACIONES NATIVAS EN EL DISPOSITIVO ────────
+    const btnTogglePush = document.getElementById('btn-toggle-push-permiso');
+
+    function actualizarBotonPush() {
+        if (!btnTogglePush) return;
+        if (!('Notification' in window)) {
+            btnTogglePush.textContent = 'No Soportado';
+            btnTogglePush.disabled = true;
+            return;
+        }
+
+        if (Notification.permission === 'granted') {
+            btnTogglePush.textContent = '✓ Habilitado';
+            btnTogglePush.style.background = 'rgba(46,213,115,0.2)';
+            btnTogglePush.style.borderColor = '#2ed573';
+            btnTogglePush.style.color = '#2ed573';
+        } else if (Notification.permission === 'denied') {
+            btnTogglePush.textContent = 'Bloqueado';
+            btnTogglePush.style.background = 'rgba(255,71,87,0.15)';
+            btnTogglePush.style.borderColor = '#ff4757';
+            btnTogglePush.style.color = '#ff4757';
+        } else {
+            btnTogglePush.textContent = 'Habilitar';
+            btnTogglePush.style.background = '';
+            btnTogglePush.style.borderColor = '';
+            btnTogglePush.style.color = '';
+        }
+    }
+
+    if (btnTogglePush) {
+        actualizarBotonPush();
+        btnTogglePush.addEventListener('click', async () => {
+            if (!('Notification' in window)) return;
+            
+            const permission = await Notification.requestPermission();
+            actualizarBotonPush();
+
+            if (permission === 'granted') {
+                showNotification('🔔 Notificaciones del dispositivo activadas correctamente.');
+                despacharNotificacionNativa('ProDuccion - Notificaciones Habilitadas', '¡Excelente! Ahora recibirás las novedades del equipo de servicio directamente en tu celular.');
+            }
+        });
+    }
+
+    function despacharNotificacionNativa(titulo, mensaje) {
+        if (!('Notification' in window)) return;
+        if (Notification.permission === 'granted' && document.visibilityState === 'hidden') {
+            new Notification(titulo, {
+                body: mensaje,
+                icon: '/icons/icon-192.png',
+                badge: '/icons/icon-192.png',
+                vibrate: [200, 100, 200]
+            });
+        }
+    }
+    window.despacharNotificacionLocal = despacharNotificacionNativa;
+
+    // ─── TRANSMISIÓN EN VIVO ─────────────────────────────
     const btnConfigTransmision = document.getElementById('btn-config-transmision');
     const transmisionIframe = document.getElementById('transmision-iframe');
     const transmisionPlaceholder = document.getElementById('transmision-placeholder');
@@ -3444,26 +4155,25 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (urlManual || enVivoAutomatico) {
             transmisionIframe.src = urlManual ? urlManual : canalUrl;
             transmisionIframe.style.display = 'block';
-            transmisionPlaceholder.style.display = 'none';
+            if (transmisionPlaceholder) transmisionPlaceholder.style.display = 'none';
         } else {
             transmisionIframe.src = '';
             transmisionIframe.style.display = 'none';
-            transmisionPlaceholder.style.display = 'flex';
-            transmisionPlaceholder.innerHTML = '<span style="font-size:2rem;margin-bottom:10px;">⏳</span><p>Esperando la siguiente transmisión en vivo...</p><p style="font-size:0.75rem;margin-top:5px;opacity:0.7;">Domingos (Mañana/Tarde) y Miércoles (Noche)</p>';
+            if (transmisionPlaceholder) {
+                transmisionPlaceholder.style.display = 'flex';
+                transmisionPlaceholder.innerHTML = '<span style="font-size:2rem;margin-bottom:10px;">⏳</span><p>Esperando la siguiente transmisión en vivo...</p><p style="font-size:0.75rem;margin-top:5px;opacity:0.7;">Domingos (Mañana/Tarde) y Miércoles (Noche)</p>';
+            }
         }
     }
-    window._renderTransmisionView = renderTransmisionView;
-    // renderTransmisionView() ya NO se llama aquí para evitar autoplay oculto.
-    // Solo se llama desde la función irA('transmision-view') al abrir la pestaña.
-
-    // ─── AUTO-ARCHIVADO PDFs: check cada minuto ───────────────
-    // esPdfExpirado ya está definido arriba — solo conectamos un intervalo
-    setInterval(() => {
-        if (window._renderRecursosPDFs) window._renderRecursosPDFs();
-        renderDashProgramacion();
-    }, 60000);
+    window.renderTransmisionView = renderTransmisionView;
 
     // Exportar render de PDFs para listeners en tiempo real
     window._renderRecursosPDFs = () => renderRecursos();
+
+    // Invocar primeros renders de inicio
+    setTimeout(() => {
+        renderProximoServicio();
+        renderMuralAgradecimientos();
+    }, 150);
 
 }); // fin DOMContentLoaded

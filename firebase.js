@@ -30,13 +30,13 @@ const KEYS = {
     proyectos:   'proyectos_creados',
     servicios:   'servicios_reservados',
     asistencias: 'asistencias_proyectos',
-    aceptaciones:'aceptaciones_tareas',
     comentarios: 'comentarios',
     recursos_pdfs:   'recursos_pdfs',
     recursos_videos: 'recursos_videos',
     lideres:     'lideres_area',
     presencia:   'presencia_usuarios',
-    chats:       'chats_mensajes'
+    chats:       'chats_mensajes',
+    mural:       'mural_agradecimientos'
 };
 
 // ─── HELPERS ─────────────────────────────────────────────
@@ -188,10 +188,6 @@ export const DB = {
     getAsistencias:  () => getObject(KEYS.asistencias),
     setAsistencias:  (obj) => setObject(KEYS.asistencias, obj),
 
-    // Aceptaciones tareas (objeto clave→valor)
-    getAceptaciones: () => getObject(KEYS.aceptaciones),
-    setAceptaciones: (obj) => setObject(KEYS.aceptaciones, obj),
-
     // Comentarios (objeto clave→array)
     getComentarios:  () => getObject(KEYS.comentarios),
     setComentarios:  (obj) => setObject(KEYS.comentarios, obj),
@@ -236,6 +232,11 @@ export const DB = {
     // Líderes de área (objeto)
     getLideres:  () => getObject(KEYS.lideres),
     setLideres:  (obj) => setObject(KEYS.lideres, obj),
+
+    // Mural de agradecimientos (array)
+    getMural:    () => getCollection(KEYS.mural),
+    setMural:    (arr) => setCollection(KEYS.mural, arr),
+    listenMural: (cb) => listenCollection(KEYS.mural, cb),
 
     // ── Migración: sube localStorage a Firebase (solo una vez) ──
     async migrarDesdeLocalStorage() {

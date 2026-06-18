@@ -4,14 +4,77 @@
 import { DB, AUTH } from './firebase.js';
 import { showNotification } from './utils.js';
 
-// Registrar Service Worker en idle para no bloquear la carga
+const APP_VERSION = '2.2.0';
+
+// Registrar Service Worker en idle para no bloquear la carga con soporte de actualización
 if ('serviceWorker' in navigator) {
-    const registerSW = () => navigator.serviceWorker.register('/sw.js').catch(() => {});
+    const registerSW = () => {
+        navigator.serviceWorker.register('/sw.js').then(reg => {
+            if (reg.waiting) {
+                notificarActualizacionDisponible(reg.waiting);
+            }
+            reg.onupdatefound = () => {
+                const installingWorker = reg.installing;
+                if (installingWorker) {
+                    installingWorker.onstatechange = () => {
+                        if (installingWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            notificarActualizacionDisponible(installingWorker);
+                        }
+                    };
+                }
+            };
+        }).catch(() => {});
+    };
+
     if ('requestIdleCallback' in window) {
         requestIdleCallback(registerSW);
     } else {
         setTimeout(registerSW, 500);
     }
+
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (!refreshing) {
+            refreshing = true;
+            window.location.reload();
+        }
+    });
+}
+
+function notificarActualizacionDisponible(worker) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed; bottom: 24px; right: 24px;
+        background: linear-gradient(135deg, #0d1b2a 0%, #1b263b 100%);
+        color: white; padding: 16px 20px; border-radius: 12px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.1);
+        z-index: 9999; display: flex; align-items: center; gap: 15px;
+        border: 1px solid rgba(79, 172, 254, 0.4); font-family: 'Outfit', sans-serif;
+        animation: slideInSW 0.3s ease-out;
+    `;
+    
+    const styleAnim = document.createElement('style');
+    styleAnim.textContent = `
+        @keyframes slideInSW {
+            from { transform: translateY(50px) scale(0.9); opacity: 0; }
+            to { transform: translateY(0) scale(1); opacity: 1; }
+        }
+    `;
+    document.head.appendChild(styleAnim);
+
+    toast.innerHTML = `
+        <div style="display:flex; flex-direction:column; gap:4px;">
+            <span style="font-weight:700; font-size:0.92rem; color:#4facfe;">🚀 Actualización Disponible</span>
+            <span style="font-size:0.8rem; opacity:0.8;">Nueva versión de ProDuccion lista para instalar.</span>
+        </div>
+        <button id="btn-actualizar-ahora" class="btn-primary" style="padding: 8px 14px; font-size: 0.78rem; border-radius: 8px; font-weight: 600; white-space: nowrap;">Actualizar</button>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    document.getElementById('btn-actualizar-ahora')?.addEventListener('click', () => {
+        worker.postMessage({ action: 'skipWaiting' });
+    });
 }
 
 // Estilos de animación

@@ -3,8 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Producción - Dashboard ERP</title>
-    <meta name="description" content="Dashboard principal del sistema ERP de Producción.">
+    <title>ProDuccion - Dashboard ERP</title>
+    <meta name="description" content="Dashboard principal del sistema ERP de ProDuccion.">
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
     <link rel="manifest" href="manifest.json">
@@ -12,7 +12,7 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="ProDUC">
+    <meta name="apple-mobile-web-app-title" content="ProDuccion">
     <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body class="dashboard-body">
@@ -39,7 +39,7 @@
         <!-- Sidebar -->
         <aside class="sidebar glass-panel">
             <div class="sidebar-header">
-                <h2>Pro<span class="highlight">DUC</span></h2>
+                <h2>Pro<span class="highlight">Duccion</span></h2>
             </div>
             <nav class="sidebar-nav">
                 <ul>
@@ -67,13 +67,13 @@
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
                         Programación
                     </a></li>
+                    <li><a href="#" class="nav-link" data-target="transmision-view">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                        Transmisión en Vivo
+                    </a></li>
                     <li><a href="#" class="nav-link" data-target="aprende-view">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polygon points="10 8 16 12 10 16 10 8"></polygon></svg>
                         Aprende
-                    </a></li>
-                    <li><a href="#" class="nav-link" data-target="transmision-view">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><circle cx="12" cy="12" r="3"></circle><path d="M12 2v2"></path><path d="M12 20v2"></path><path d="M2 12h2"></path><path d="M20 12h2"></path></svg>
-                        Transmisión en Vivo
                     </a></li>
                     <li><a href="#" class="nav-link" data-target="chat-view">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
@@ -86,10 +86,11 @@
                 </ul>
             </nav>
             <div class="sidebar-footer">
-                <a href="#" class="logout-btn">
+                <a href="#" class="logout-btn" style="margin-bottom:6px;">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
                     Cerrar Sesión
                 </a>
+                <div style="font-size:0.72rem; color:var(--text-muted); text-align:center; opacity:0.6; padding-top:4px;">Versión v2.2.2</div>
             </div>
         </aside>
 
@@ -116,6 +117,9 @@
                 <!-- Tarjeta de bienvenida con info del usuario -->
                 <div class="bienvenida-card glass-panel" style="margin-bottom:20px;">
                     <div id="bienvenida-content"></div>
+                </div>
+                <!-- Panel de Próximo Servicio Destacado (Dinámico para Siervos y roles) -->
+                <div id="dash-proximo-servicio-panel" class="details-panel glass-panel" style="margin-bottom:20px; display:none; background: linear-gradient(135deg, rgba(79, 172, 254, 0.08) 0%, rgba(0, 0, 0, 0.15) 100%); border: 1px solid rgba(79, 172, 254, 0.25);">
                 </div>
                 <section class="dashboard-grid">
                     <div class="widget-card glass-panel">
@@ -180,6 +184,52 @@
                         <ul class="activity-list" id="dash-proyectos-list">
                             <li><span style="color:var(--text-muted);font-size:0.9rem;">Sin eventos especiales.</span></li>
                         </ul>
+                    </div>
+                </section>
+
+                <!-- Panel Mural de Agradecimientos y Logros -->
+                <section class="dashboard-details" style="margin-top:20px;">
+                    <div class="details-panel glass-panel" id="dash-mural-agradecimientos-panel">
+                        <div class="panel-heading" style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                            <h3>💬 Mural de Agradecimientos y Logros</h3>
+                            <button id="btn-mostrar-post-agradecimiento" class="btn-secondary" style="font-size:0.75rem; padding:6px 12px; display:none;">✍️ Dejar Agradecimiento</button>
+                        </div>
+                        
+                        <!-- Formulario para publicar agradecimiento (Líderes/Admin) -->
+                        <div id="mural-post-form-container" class="glass-panel" style="display:none; padding:16px; border-radius:10px; margin-top:12px; border:1px solid rgba(255,255,255,0.06); background:rgba(0,0,0,0.15);">
+                            <form id="mural-post-form" class="custom-form">
+                                <div class="form-row">
+                                    <div class="input-group">
+                                        <label>Título / Evento</label>
+                                        <input type="text" id="mural-post-titulo" placeholder="Ej: Domingo de Excelencia - Mañana" required>
+                                    </div>
+                                    <div class="input-group">
+                                        <label>Dirigido a (Área / General)</label>
+                                        <select id="mural-post-area">
+                                            <option value="General">General (Todo el Equipo)</option>
+                                            <option value="Cámaras">Cámaras / Switchers</option>
+                                            <option value="Fotografía">Fotografía</option>
+                                            <option value="Visuales">Visuales / Proyección</option>
+                                            <option value="Streaming">Streaming / Transmisión</option>
+                                            <option value="Luces">Luces / Iluminación</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="input-group">
+                                    <label>Mensaje de Agradecimiento</label>
+                                    <textarea id="mural-post-mensaje" rows="2" placeholder="Describe los logros y felicita al equipo..." required style="resize:vertical;"></textarea>
+                                </div>
+                                <div style="display:flex; gap:8px; margin-top:12px; justify-content:flex-end;">
+                                    <button type="button" class="btn-secondary" id="btn-cancelar-post-agradecimiento" style="width:auto; font-size:0.8rem; padding:6px 12px;">Cancelar</button>
+                                    <button type="submit" class="btn-primary" style="width:auto; font-size:0.8rem; padding:6px 15px;">Publicar Nota</button>
+                                </div>
+                            </form>
+                        </div>
+                        
+                        <!-- Lista de Agradecimientos -->
+                        <div id="mural-agradecimientos-list" style="margin-top:16px; display:flex; flex-direction:column; gap:16px;">
+                            <p style="color:var(--text-muted); font-size:0.85rem; text-align:center; padding:15px;">Cargando mural social...</p>
+                        </div>
                     </div>
                 </section>
             </div>
@@ -412,14 +462,89 @@
                 </div>
             </div>
 
-            <!-- VISTA: APRENDE -->
             <div id="aprende-view" class="view-section hidden-view">
+                <!-- Reproductor Principal Destacado -->
+                <div class="details-panel glass-panel" id="aprende-reproductor-panel" style="margin-bottom: 24px;">
+                    <div class="panel-heading">
+                        <h2>🎬 Reproductor Principal - Capacitación</h2>
+                    </div>
+                    <div class="aprende-player-container" style="display: flex; gap: 20px; flex-wrap: wrap; margin-top: 15px;">
+                        <!-- Iframe de YouTube -->
+                        <div class="video-wrapper" style="flex: 1.6; min-width: 300px; position: relative; padding-bottom: 35%; height: 0; background: #000; border-radius: 12px; overflow: hidden; border: 1px solid var(--panel-border);">
+                            <iframe id="aprende-iframe-principal" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%;" src="https://www.youtube.com/embed/J5-vGkP_T_Q" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        </div>
+                        <!-- Info del Video -->
+                        <div class="video-info-box" style="flex: 1; min-width: 250px; display: flex; flex-direction: column; justify-content: space-between; padding: 10px;">
+                            <div>
+                                <span class="badge" id="aprende-badge-area" style="background: rgba(46, 213, 115, 0.15); color: #2ed573; border: 1px solid rgba(46, 213, 115, 0.3); padding: 4px 10px; border-radius: 20px; font-size: 0.78rem; font-weight: 600; display: inline-block; margin-bottom: 10px;">Cámaras</span>
+                                <h3 id="aprende-titulo-principal" style="font-size: 1.3rem; font-weight: 700; margin-bottom: 12px; line-height: 1.3;">Curso de Operación de Cámaras y Composición</h3>
+                                <p id="aprende-desc-principal" style="font-size: 0.88rem; color: var(--text-muted); line-height: 1.5;">Aprende las reglas de composición de planos, balance de blancos, enfoque manual y movimientos fluidos de cámara.</p>
+                            </div>
+                            <div style="margin-top: 20px; display: flex; flex-direction: column; gap: 10px;">
+                                <button id="btn-completar-capacitacion" class="btn-primary" style="width: 100%; font-size: 0.8rem; padding: 10px 14px; border-radius: 8px; font-weight: 600;" onclick="window.completarCursoCapacitacion()">✓ Marcar curso como completado</button>
+                                <div style="font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 6px;">
+                                    <span>📺 Selecciona un curso abajo para cambiar de video</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cursos por Áreas (3 Columnas Abajo) -->
+                <div style="margin-bottom: 28px;">
+                    <h3 style="font-size: 1.15rem; font-weight: 600; margin-bottom: 16px; color: var(--text-main); display: flex; align-items: center; gap: 8px;">
+                        📚 Programas y Cursos por Especialidad
+                    </h3>
+                    <div class="cursos-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(285px, 1fr)); gap: 20px;">
+                        <!-- Curso 1: Cámaras -->
+                        <div class="curso-tarjeta glass-panel" style="padding: 16px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.02); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <div>
+                                <div style="position:relative; width:100%; border-radius: 8px; overflow:hidden; margin-bottom:12px; border: 1px solid rgba(255,255,255,0.05);">
+                                    <img src="https://img.youtube.com/vi/J5-vGkP_T_Q/mqdefault.jpg" alt="Curso Cámaras" style="width: 100%; display:block;">
+                                </div>
+                                <span style="background: rgba(46, 213, 115, 0.15); color: #2ed573; border: 1px solid rgba(46, 213, 115, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; display: inline-block; margin-bottom: 8px;">Área: Cámaras / Switcher</span>
+                                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color:var(--text-main);">Curso de Operación de Cámaras y Composición</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 15px;">Aprende las reglas de composición de planos, balance de blancos, enfoque manual y movimientos fluidos de cámara.</p>
+                            </div>
+                            <button class="btn-primary" onclick="cargarCursoEnReproductor('J5-vGkP_T_Q', 'Curso de Operación de Cámaras y Composición', 'Aprende las reglas de composición de planos, balance de blancos, enfoque manual y movimientos fluidos de cámara.', 'Cámaras')" style="width: 100%; font-size: 0.8rem; padding: 8px; border-radius:8px;">📖 Iniciar Curso</button>
+                        </div>
+
+                        <!-- Curso 2: Fotografía -->
+                        <div class="curso-tarjeta glass-panel" style="padding: 16px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.02); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <div>
+                                <div style="position:relative; width:100%; border-radius: 8px; overflow:hidden; margin-bottom:12px; border: 1px solid rgba(255,255,255,0.05);">
+                                    <img src="https://img.youtube.com/vi/2T9p3fE9M94/mqdefault.jpg" alt="Curso Fotografía" style="width: 100%; display:block;">
+                                </div>
+                                <span style="background: rgba(255, 71, 87, 0.15); color: #ff4757; border: 1px solid rgba(255, 71, 87, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; display: inline-block; margin-bottom: 8px;">Área: Fotografía</span>
+                                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color:var(--text-main);">Curso de Fotografía y Control de Luz</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 15px;">Domina el triángulo de exposición (ISO, velocidad de obturación y diafragma) junto con técnicas esenciales de iluminación.</p>
+                            </div>
+                            <button class="btn-primary" onclick="cargarCursoEnReproductor('2T9p3fE9M94', 'Curso de Fotografía y Control de Luz', 'Domina el triángulo de exposición (ISO, velocidad de obturación y diafragma) junto con técnicas esenciales de iluminación y encuadre fotográfico.', 'Fotografía')" style="width: 100%; font-size: 0.8rem; padding: 8px; border-radius:8px;">📖 Iniciar Curso</button>
+                        </div>
+
+                        <!-- Curso 3: Switchers -->
+                        <div class="curso-tarjeta glass-panel" style="padding: 16px; border-radius: 12px; display: flex; flex-direction: column; justify-content: space-between; border: 1px solid var(--panel-border); background: rgba(255,255,255,0.02); transition: transform 0.2s, box-shadow 0.2s;" onmouseover="this.style.transform='translateY(-3px)'; this.style.boxShadow='0 8px 20px rgba(0,0,0,0.3)'" onmouseout="this.style.transform='none'; this.style.boxShadow='none'">
+                            <div>
+                                <div style="position:relative; width:100%; border-radius: 8px; overflow:hidden; margin-bottom:12px; border: 1px solid rgba(255,255,255,0.05);">
+                                    <img src="https://img.youtube.com/vi/nN4Mv3e_eDk/mqdefault.jpg" alt="Curso Switchers" style="width: 100%; display:block;">
+                                </div>
+                                <span style="background: rgba(255, 159, 67, 0.15); color: #ff9f43; border: 1px solid rgba(255, 159, 67, 0.3); padding: 2px 8px; border-radius: 10px; font-size: 0.7rem; font-weight: 600; display: inline-block; margin-bottom: 8px;">Área: Switchers / Dirección</span>
+                                <h4 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; color:var(--text-main);">Dirección de Switcher de Video en Vivo</h4>
+                                <p style="font-size: 0.8rem; color: var(--text-muted); line-height: 1.4; margin-bottom: 15px;">Descubre cómo dirigir cámaras en vivo, realizar transiciones limpias y operar mezcladores digitales Blackmagic ATEM.</p>
+                            </div>
+                            <button class="btn-primary" onclick="cargarCursoEnReproductor('nN4Mv3e_eDk', 'Dirección de Switcher de Video en Vivo', 'Descubre cómo dirigir cámaras en vivo, realizar transiciones limpias y operar mezcladores digitales Blackmagic ATEM.', 'Switchers')" style="width: 100%; font-size: 0.8rem; padding: 8px; border-radius:8px;">📖 Iniciar Curso</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lista de Videos Adicionales subidos por Admin (Dinámicos) -->
                 <div id="recursos-videos-section" class="details-panel glass-panel">
                     <div class="panel-heading">
-                        <h2>🎬 Aprende (Videos y Tutoriales)</h2>
+                        <h2>🎬 Tutoriales y Material Adicional</h2>
                         <span id="recursos-videos-count" style="color:var(--secondary-color);font-size:0.85rem;"></span>
                     </div>
                     <div id="recursos-add-video-panel">
+                        <!-- Formulario para agregar videos adicionales (Solo Admin/Líder) -->
                         <form id="form-add-video" class="custom-form" style="margin-top:8px;">
                             <div class="form-row">
                                 <div class="input-group">
@@ -511,6 +636,13 @@
                             <p style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">Alterna entre modo oscuro y claro</p>
                         </div>
                         <button class="btn-secondary" id="toggle-theme" style="padding:8px 16px;">☀️ Modo Claro</button>
+                    </div>
+                    <div id="ajustes-push" style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:rgba(255,255,255,0.03);border-radius:12px;border:1px solid var(--panel-border);margin-bottom:20px;">
+                        <div>
+                            <strong>🔔 Notificaciones del Sistema</strong>
+                            <p style="color:var(--text-muted);font-size:0.85rem;margin-top:4px;">Recibe recordatorios de tus servicios en tiempo real</p>
+                        </div>
+                        <button class="btn-secondary" id="btn-toggle-push-permiso" style="padding:8px 16px;">Habilitar</button>
                     </div>
                 </div>
             </div>
@@ -784,6 +916,23 @@
                         </div>
                         <button type="submit" class="btn-primary" style="margin-top:10px;max-width:200px;">Guardar Perfil</button>
                     </form>
+                    <!-- Medallas de Servidor (Gamificación) y Progreso de Onboarding -->
+                    <div id="perfil-medallas-section" style="margin-top:20px; border-top:1px solid var(--panel-border); padding-top:16px;">
+                        <h3 style="font-size:0.9rem; margin-bottom:10px; display:flex; align-items:center; gap:6px;">🏅 Mis Medallas de Servicio</h3>
+                        <!-- Barra de progreso de onboarding -->
+                        <div style="margin-bottom:12px; background:rgba(255,255,255,0.03); border-radius:10px; padding:10px; border:1px solid rgba(255,255,255,0.05);">
+                            <div style="display:flex; justify-content:space-between; font-size:0.75rem; margin-bottom:4px; color:var(--text-muted);">
+                                <span>Progreso de Capacitación (Onboarding)</span>
+                                <span id="perfil-onboarding-pct" style="font-weight:600; color:var(--primary-color);">0%</span>
+                            </div>
+                            <div style="width:100%; height:6px; background:rgba(255,255,255,0.08); border-radius:10px; overflow:hidden;">
+                                <div id="perfil-onboarding-bar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--primary-color), var(--secondary-color)); transition:width 0.4s ease;"></div>
+                            </div>
+                        </div>
+                        <!-- Grid de medallas -->
+                        <div id="perfil-medallas-list" style="display:flex; flex-wrap:wrap; gap:12px; margin-top:8px;"></div>
+                    </div>
+
                     <!-- Historial de asistencia -->
                     <div id="perfil-historial" style="margin-top:20px;border-top:1px solid var(--panel-border);padding-top:16px;">
                         <h3 style="font-size:0.9rem;margin-bottom:12px;">📋 Historial de Asistencia</h3>
