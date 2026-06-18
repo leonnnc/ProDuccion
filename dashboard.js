@@ -122,7 +122,6 @@ function getSafeEmail(email) {
 let appReady = false;
 
 async function sincronizarDesdeFirebase() {
-    console.log("DEBUG sincronizarDesdeFirebase - started");
     try {
         // Sincronización inicial — carga todos los datos antes de renderizar
         const [usr, proy, serv, asi, com, pdfs, vids, lid, mur] = await Promise.all([
@@ -130,7 +129,6 @@ async function sincronizarDesdeFirebase() {
             DB.getAsistencias(), DB.getComentarios(),
             DB.getPdfs(), DB.getVideos(), DB.getLideres(), DB.getMural()
         ]);
-        console.log("DEBUG sincronizarDesdeFirebase - Promise.all resolved successfully!");
         updateLocalCache('usuarios_registrados', usr);
         updateLocalCache('proyectos_creados', proy);
         updateLocalCache('servicios_reservados', serv);
@@ -141,13 +139,12 @@ async function sincronizarDesdeFirebase() {
         updateLocalCache('lideres_area', lid);
         updateLocalCache('mural_agradecimientos', mur);
     } catch (err) {
-        console.error("DEBUG sincronizarDesdeFirebase - Promise.all failed with error:", err);
+        console.error("Error al sincronizar datos iniciales desde Firebase:", err);
     }
 
     // Listeners en tiempo real — solo actualizan UI cuando appReady=true
     // Usan window.* para evitar referencias a funciones no definidas aún
     DB.listenUsuarios(d => {
-        console.log("DEBUG listenUsuarios - triggered. Data:", d, "appReady:", appReady, "hasCargarTabla:", !!window._cargarTablaUsuarios);
         updateLocalCache('usuarios_registrados', d);
         if (!appReady) return;
         if (window._cargarTablaUsuarios)     window._cargarTablaUsuarios();
@@ -562,7 +559,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!usuariosContainer) return;
         usuariosContainer.innerHTML = '';
         let usuarios = JSON.parse(localStorage.getItem('usuarios_registrados') || '[]');
-        console.log("DEBUG - Usuarios recuperados:", usuarios);
         // Ocultar el admin maestro y todos los usuarios con rol Admin
         usuarios = usuarios.filter(u => u.correo.toLowerCase() !== ADMIN_MAESTRO && u.rol !== 'Admin');
         

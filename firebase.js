@@ -44,7 +44,6 @@ const KEYS = {
 /** Lee una colección completa y retorna un array */
 async function getCollection(key) {
     const snap = await get(ref(db, key));
-    console.log("DEBUG getCollection - key:", key, "exists:", snap.exists(), "val:", snap.val());
     if (!snap.exists()) return [];
     const val = snap.val();
     // Realtime DB guarda objetos con keys automáticas; convertir a array
