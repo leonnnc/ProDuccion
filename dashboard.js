@@ -555,6 +555,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!usuariosContainer) return;
         usuariosContainer.innerHTML = '';
         let usuarios = JSON.parse(localStorage.getItem('usuarios_registrados') || '[]');
+        console.log("DEBUG - Usuarios recuperados:", usuarios);
         // Ocultar el admin maestro y todos los usuarios con rol Admin
         usuarios = usuarios.filter(u => u.correo.toLowerCase() !== ADMIN_MAESTRO && u.rol !== 'Admin');
         
