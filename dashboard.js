@@ -122,21 +122,27 @@ function getSafeEmail(email) {
 let appReady = false;
 
 async function sincronizarDesdeFirebase() {
-    // Sincronización inicial — carga todos los datos antes de renderizar
-    const [usr, proy, serv, asi, com, pdfs, vids, lid, mur] = await Promise.all([
-        DB.getUsuarios(), DB.getProyectos(), DB.getServicios(),
-        DB.getAsistencias(), DB.getComentarios(),
-        DB.getPdfs(), DB.getVideos(), DB.getLideres(), DB.getMural()
-    ]);
-    updateLocalCache('usuarios_registrados', usr);
-    updateLocalCache('proyectos_creados', proy);
-    updateLocalCache('servicios_reservados', serv);
-    updateLocalCache('asistencias_proyectos', asi);
-    updateLocalCache('comentarios', com);
-    updateLocalCache('recursos_pdfs', pdfs);
-    updateLocalCache('recursos_videos', vids);
-    updateLocalCache('lideres_area', lid);
-    updateLocalCache('mural_agradecimientos', mur);
+    console.log("DEBUG sincronizarDesdeFirebase - started");
+    try {
+        // Sincronización inicial — carga todos los datos antes de renderizar
+        const [usr, proy, serv, asi, com, pdfs, vids, lid, mur] = await Promise.all([
+            DB.getUsuarios(), DB.getProyectos(), DB.getServicios(),
+            DB.getAsistencias(), DB.getComentarios(),
+            DB.getPdfs(), DB.getVideos(), DB.getLideres(), DB.getMural()
+        ]);
+        console.log("DEBUG sincronizarDesdeFirebase - Promise.all resolved successfully!");
+        updateLocalCache('usuarios_registrados', usr);
+        updateLocalCache('proyectos_creados', proy);
+        updateLocalCache('servicios_reservados', serv);
+        updateLocalCache('asistencias_proyectos', asi);
+        updateLocalCache('comentarios', com);
+        updateLocalCache('recursos_pdfs', pdfs);
+        updateLocalCache('recursos_videos', vids);
+        updateLocalCache('lideres_area', lid);
+        updateLocalCache('mural_agradecimientos', mur);
+    } catch (err) {
+        console.error("DEBUG sincronizarDesdeFirebase - Promise.all failed with error:", err);
+    }
 
     // Listeners en tiempo real — solo actualizan UI cuando appReady=true
     // Usan window.* para evitar referencias a funciones no definidas aún
