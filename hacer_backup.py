@@ -4,7 +4,7 @@ import zipfile
 import sys
 
 def crear_backup():
-    nombre_zip = "backup_ProDuccion_v2.2.2.zip"
+    nombre_zip = "backup_ProDuccion_v2.2.3.zip"
     directorio_raiz = os.path.abspath(os.path.dirname(__file__))
     ruta_zip = os.path.join(directorio_raiz, nombre_zip)
 

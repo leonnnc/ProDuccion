@@ -409,14 +409,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const roleColors = { 'Admin': '#ff4757', 'SuperLider': '#ff6b6b', 'Lider': '#4facfe', 'Siervo': '#2ed573' };
         const rolColor = roleColors[sesion.rol] || '#2ed573';
 
-        const accesosPorRol = {
-            'Admin':      ['Dashboard', 'Usuarios', 'Proyectos', 'Agenda', 'Asistencia', 'Programación', 'Aprende', 'Ajustes'],
-            'SuperLider': ['Dashboard', 'Usuarios', 'Proyectos', 'Agenda', 'Asistencia', 'Programación', 'Aprende', 'Ajustes'],
-            'Lider':      ['Dashboard', 'Usuarios', 'Agenda', 'Asistencia', 'Programación', 'Aprende'],
-            'Siervo':     ['Dashboard', 'Agenda', 'Programación', 'Aprende']
-        };
-        const accesos = accesosPorRol[sesion.rol] || accesosPorRol['Siervo'];
-
         const usuariosList = JSON.parse(localStorage.getItem('usuarios_registrados') || '[]');
         const curUser = usuariosList.find(x => x.correo.toLowerCase() === sesion.correo.toLowerCase());
         const imgTag = (curUser && curUser.fotoUrl)
@@ -441,9 +433,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 </div>
                 <div>
                     <div style="font-size:1rem;font-weight:700;">${momento}, <span style="color:var(--primary-color);">${sesion.nombre.split(' ')[0]}</span>${roleDisplay}${areaDisplay}</div>
-                    <div style="display:flex;gap:6px;flex-wrap:wrap;justify-content:center;margin-top:6px;">
-                        ${accesos.map(a => `<span style="background:rgba(79,172,254,0.1);border:1px solid rgba(79,172,254,0.25);border-radius:20px;padding:2px 10px;font-size:0.72rem;color:var(--primary-color);">${a}</span>`).join('')}
-                    </div>
                 </div>
             </div>`;
 

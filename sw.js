@@ -1,7 +1,7 @@
 // ==========================================
 // SERVICE WORKER — ProDuccion PWA
 // ==========================================
-const CACHE_NAME = 'produc-v9';
+const CACHE_NAME = 'produc-v10';
 
 // Assets estáticos que se cachean al instalar
 const STATIC_ASSETS = [
